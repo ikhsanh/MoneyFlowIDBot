@@ -13,7 +13,7 @@ module.exports = {
 🌟 *Selamat Datang di MoneyFlowID, ${name}!*
 
 Bot pencatatan keuangan pribadi yang cerdas, terintegrasi dengan:
-• 🤖 *Gemini AI* — untuk analisis & transaksi natural
+• 🤖 *ChatGPT* — untuk analisis & transaksi natural
 • 📊 *Google Spreadsheet* — untuk laporan rapi & grafik
 • 💳 Multi-akun & multi-kategori
 
@@ -378,16 +378,17 @@ Ketik /menu untuk kembali ke menu.
 `,
 
   aiProcessing: '🤔 *AI sedang memproses...*',
-  aiTransactionDetected: (data) => `
-🤖 *AI mendeteksi transaksi:*
-
-${data.type === 'income' ? '💰' : '💸'} *${data.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}*
-📌 ${data.type === 'income' ? 'Sumber' : 'Kategori'}: *${data.category}*
-💵 Nominal: *Rp ${formatNumber(data.amount)}*
-🏦 Akun: *${data.account}*
-📝 Catatan: ${data.note || '-'}
-
-Apakah ini benar?`,
+  aiTransactionDetected: (data) => {
+    const fmt = (n) => `Rp ${Math.round(n || 0).toLocaleString('id-ID')}`;
+    const type = (data.type || '').toLowerCase();
+    if (type === 'transfer') {
+      return `\n🤖 *AI mendeteksi transfer:*\n\n↔️ *Transfer / Tarik Tunai*\n💸 Dari akun: *${data.dari || '-'}*\n🏦 Ke akun: *${data.ke || '-'}*\n💵 Nominal: *${fmt(data.amount)}*\n📝 Catatan: ${data.note || '-'}\n\nApakah ini benar?`;
+    }
+    if (type === 'paylater') {
+      return `\n🤖 *AI mendeteksi pembelian cicilan/paylater:*\n\n💳 *Utang Baru (Paylater/Cicilan)*\n🏦 Kreditor: *${data.creditor || 'Paylater'}*\n💵 Nominal: *${fmt(data.amount)}*\n🛒 Kategori: *${data.category || '-'}*\n📝 Catatan: ${data.note || '-'}\n\n_Saldo kamu tidak dikurangi. Transaksi ini dicatat sebagai utang baru._\n\nApakah ini benar?`;
+    }
+    return `\n🤖 *AI mendeteksi transaksi:*\n\n${data.type === 'income' ? '💰' : '💸'} *${data.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}*\n📌 ${data.type === 'income' ? 'Sumber' : 'Kategori'}: *${data.category}*\n💵 Nominal: *${fmt(data.amount)}*\n🏦 Akun: *${data.account}*\n📝 Catatan: ${data.note || '-'}\n\nApakah ini benar?`;
+  },
 
   aiError: '❌ AI tidak dapat memproses pesan ini. Coba lagi ya!',
 

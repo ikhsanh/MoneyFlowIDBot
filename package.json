@@ -1,23 +1,30 @@
 {
   "name": "moneyflowid-bot",
   "version": "1.0.0",
-  "description": "Telegram Financial Tracker Bot dengan Gemini AI & Google Sheets",
+  "description": "Telegram Financial Tracker Bot dengan ChatGPT AI & Google Sheets",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
     "dotenv": "^16.4.5",
     "googleapis": "^144.0.0",
     "node-cron": "^3.0.3",
-    "node-telegram-bot-api": "^0.66.0"
+    "node-telegram-bot-api": "^0.66.0",
+    "openai": "^4.104.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
   },
-  "keywords": ["telegram", "bot", "finance", "gemini", "google-sheets", "moneyflow"],
+  "keywords": [
+    "telegram",
+    "bot",
+    "finance",
+    "chatgpt",
+    "google-sheets",
+    "moneyflow"
+  ],
   "author": "MoneyFlowID",
   "license": "MIT"
 }

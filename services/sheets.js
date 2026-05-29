@@ -763,18 +763,27 @@ async function addTransaction(spreadsheetId, tx) {
  * Tambah nama ke section (Piutang/Utang) jika belum ada
  */
 async function addNameToSection(spreadsheetId, sheetName, name, startRow, maxRows, col) {
+  console.log(`[addNameToSection] name="${name}", sheet="${sheetName}", startRow=${startRow}, maxRows=${maxRows}`);
   const data = await readRange(
     spreadsheetId,
     `'${sheetName}'!${col}${startRow}:${col}${startRow + maxRows - 1}`
   );
+  console.log(`[addNameToSection] existing data:`, JSON.stringify(data));
   const existing = (data || []).flat().map((v) => (v || '').toLowerCase());
-  if (existing.includes(name.toLowerCase())) return; // sudah ada
+  if (existing.includes(name.toLowerCase())) {
+    console.log(`[addNameToSection] "${name}" already exists, skip`);
+    return;
+  }
 
   // Cari baris kosong
   const emptyIdx = existing.findIndex((v) => !v);
-  if (emptyIdx === -1) return; // section penuh
+  if (emptyIdx === -1) {
+    console.log(`[addNameToSection] Section penuh, tidak bisa tambah "${name}"`);
+    return;
+  }
 
   const targetRow = startRow + emptyIdx;
+  console.log(`[addNameToSection] Menulis "${name}" ke ${col}${targetRow}`);
   const sheets = await getSheetsClient();
   await sheets.spreadsheets.values.update({
     spreadsheetId,
@@ -782,6 +791,7 @@ async function addNameToSection(spreadsheetId, sheetName, name, startRow, maxRow
     valueInputOption: 'RAW',
     resource: { values: [[name]] },
   });
+  console.log(`[addNameToSection] ✅ Berhasil tulis "${name}" ke ${col}${targetRow}`);
 }
 
 /**

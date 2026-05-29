@@ -838,26 +838,59 @@ async function saveAiTransaction(bot, callbackQuery) {
 
   const ai = data.aiTransaction;
 
-  // ── Map field Gemini → field transaksi ─────────────────────────────────
-  // Gemini returns: { isTransaction, type, amount, category, account, note, confidence }
-  // kita butuh:     { cashflow, name, amount, category, dari, ke }
-  const isIncome = (ai.type || '').toLowerCase() === 'income';
-  const cashflow = isIncome ? 'Income' : 'Spending';
-  const accountName = ai.account || (user.accounts[0]?.name || 'Cash');
-  const dari = isIncome ? '' : accountName;
-  const ke   = isIncome ? accountName : '';
+  // ── Map field AI → field transaksi ─────────────────────────────────────
+  // AI returns: { isTransaction, type, amount, category, account, note, confidence }
+  // For transfer:  { type:'transfer', amount, dari, ke, note }
+  // For paylater:  { type:'paylater', amount, creditor, category, note }
+  // We need:       { cashflow, name, amount, category, dari, ke }
 
-  // Gunakan field yang sudah dipetakan (support both formats)
-  const tx = {
-    name:     ai.name || ai.note || ai.category || cashflow,
-    amount:   ai.amount || 0,
-    cashflow: ai.cashflow || cashflow,
-    category: ai.category || (isIncome
-      ? (user.incomeSources[0]?.name || 'Income')
-      : (user.spendingCategories[0]?.name || 'Pengeluaran')),
-    dari:     ai.dari || dari,
-    ke:       ai.ke   || ke,
-  };
+  const aiType = (ai.type || '').toLowerCase();
+  let tx;
+
+  if (aiType === 'transfer') {
+    // Tarik Tunai / Transfer antar akun
+    const dari = ai.dari || (user.accounts[0]?.name || 'Cash');
+    const ke   = ai.ke   || 'Cash';
+    tx = {
+      name:     ai.name || ai.note || `Transfer ${dari} → ${ke}`,
+      amount:   ai.amount || 0,
+      cashflow: 'Transfer',
+      category: 'Antar Account',
+      dari,
+      ke,
+    };
+
+  } else if (aiType === 'paylater') {
+    // Paylater / Cicilan — dicatat sebagai Utang Baru
+    const creditor = ai.creditor || 'Paylater';
+    tx = {
+      name:     ai.name || ai.note || `Cicilan ${creditor}`,
+      amount:   ai.amount || 0,
+      cashflow: 'Utang Baru',
+      category: creditor,   // kreditor sebagai "siapa yang dipinjam"
+      dari:     '',
+      ke:       '',          // tidak masuk ke akun manapun (item langsung diterima)
+    };
+    console.log('[Paylater] tx akan disimpan:', JSON.stringify(tx));
+
+  } else {
+    const isIncome = aiType === 'income';
+    const cashflow = isIncome ? 'Income' : 'Spending';
+    const accountName = ai.account || (user.accounts[0]?.name || 'Cash');
+    const dari = isIncome ? '' : accountName;
+    const ke   = isIncome ? accountName : '';
+
+    tx = {
+      name:     ai.name || ai.note || ai.category || cashflow,
+      amount:   ai.amount || 0,
+      cashflow: ai.cashflow || cashflow,
+      category: ai.category || (isIncome
+        ? (user.incomeSources[0]?.name || 'Income')
+        : (user.spendingCategories[0]?.name || 'Pengeluaran')),
+      dari:     ai.dari || dari,
+      ke:       ai.ke   || ke,
+    };
+  }
 
   try {
     await sheets.addTransaction(user.spreadsheetId, { ...tx, _userData: user });
@@ -871,21 +904,33 @@ async function saveAiTransaction(bot, callbackQuery) {
       userStore.updateAccountBalance(userId, tx.dari, -tx.amount);
       userStore.updateAccountBalance(userId, tx.ke, tx.amount);
     }
+    // Paylater: tidak update saldo (utang, bukan uang masuk ke akun)
 
     session.clearSession(userId);
-    // Kembali ke IDLE, bukan AI_CHAT — agar user bisa langsung kirim transaksi berikutnya
     session.setState(userId, STATES.IDLE);
 
-    const savedMsg = tx.cashflow === 'Income'
-      ? t.incomeSaved(tx.amount, tx.ke)
-      : t.expenseSaved(tx.amount, tx.dari);
+    // Pesan sukses sesuai tipe transaksi
+    const fmt = (n) => `Rp ${Math.round(n).toLocaleString('id-ID')}`;
+    let savedMsg;
+    if (tx.cashflow === 'Transfer') {
+      savedMsg = user.lang === 'id'
+        ? `✅ *Transfer ${fmt(tx.amount)} berhasil!*\n${tx.dari} → ${tx.ke}`
+        : `✅ *Transfer ${fmt(tx.amount)} done!*\n${tx.dari} → ${tx.ke}`;
+    } else if (tx.cashflow === 'Utang Baru') {
+      savedMsg = user.lang === 'id'
+        ? `✅ *Cicilan/Utang ${fmt(tx.amount)} tercatat!*\n💳 Kreditor: *${tx.category}*\n📝 ${tx.name}`
+        : `✅ *Installment/Debt ${fmt(tx.amount)} recorded!*\n💳 Creditor: *${tx.category}*\n📝 ${tx.name}`;
+    } else if (tx.cashflow === 'Income') {
+      savedMsg = t.incomeSaved(tx.amount, tx.ke);
+    } else {
+      savedMsg = t.expenseSaved(tx.amount, tx.dari);
+    }
 
     await bot.editMessageText(savedMsg, {
       chat_id: chatId,
       message_id: callbackQuery.message.message_id,
       parse_mode: 'Markdown',
     });
-    // Kirim main menu setelah sukses
     await bot.sendMessage(chatId, t.mainMenu, {
       parse_mode: 'Markdown',
       reply_markup: mainMenuKeyboard(user.lang),
