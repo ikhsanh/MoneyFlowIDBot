@@ -5,7 +5,7 @@
 
 const userStore = require('../services/userStore');
 const sheets = require('../services/sheets');
-const openai = require('../services/openai');
+const gemini = require('../services/gemini');
 const session = require('../middleware/session');
 const { STATES } = require('../middleware/session');
 const {
@@ -328,7 +328,7 @@ async function showAiInsight(bot, chatId, userId) {
     const now = new Date();
     const transactions = await sheets.getTransactions(user.spreadsheetId, now.getMonth() + 1, now.getFullYear());
 
-    const insight = await openai.generateInsight(
+    const insight = await gemini.generateInsight(
       transactions || [],
       user.accounts || [],
       user.bills || [],
@@ -389,7 +389,7 @@ async function handleAiMessage(bot, msg) {
 
   try {
     // Coba parse sebagai transaksi dulu
-    const parsed = await openai.parseTransaction(text, userCtx, user.lang);
+    const parsed = await gemini.parseTransaction(text, userCtx, user.lang);
 
     if (parsed && parsed.isTransaction && parsed.confidence >= 0.6) {
       // Deteksi transaksi — minta konfirmasi
@@ -408,7 +408,7 @@ async function handleAiMessage(bot, msg) {
     } else {
       // Fallback ke chat biasa
       const sessionData = session.getSession(userId);
-      const response = await openai.chat(text, sessionData.aiHistory || [], userCtx, user.lang);
+      const response = await gemini.chat(text, sessionData.aiHistory || [], userCtx, user.lang);
       session.addToAiHistory(userId, 'user', text);
       session.addToAiHistory(userId, 'model', response);
       await bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });

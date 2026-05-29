@@ -13,7 +13,7 @@ module.exports = {
 🌟 *Welcome to MoneyFlowID, ${name}!*
 
 Your smart personal finance tracker, integrated with:
-• 🤖 *ChatGPT* — for analysis & natural transactions
+• 🤖 *Gemini AI* — for analysis & natural transactions
 • 📊 *Google Spreadsheet* — for clean reports & charts
 • 💳 Multi-account & multi-category
 
@@ -377,17 +377,16 @@ Type /menu to return to the menu.
 `,
 
   aiProcessing: '🤔 *AI is processing...*',
-  aiTransactionDetected: (data) => {
-    const fmt = (n) => `Rp ${Math.round(n || 0).toLocaleString('id-ID')}`;
-    const type = (data.type || '').toLowerCase();
-    if (type === 'transfer') {
-      return `\n🤖 *AI detected a transfer:*\n\n↔️ *Transfer / Cash Withdrawal*\n💸 From account: *${data.dari || '-'}*\n🏦 To account: *${data.ke || '-'}*\n💵 Amount: *${fmt(data.amount)}*\n📝 Note: ${data.note || '-'}\n\nIs this correct?`;
-    }
-    if (type === 'paylater') {
-      return `\n🤖 *AI detected a paylater/installment purchase:*\n\n💳 *New Debt (Paylater/Installment)*\n🏦 Creditor: *${data.creditor || 'Paylater'}*\n💵 Amount: *${fmt(data.amount)}*\n🛒 Category: *${data.category || '-'}*\n📝 Note: ${data.note || '-'}\n\n_Your account balance will NOT be deducted. This is recorded as a new debt._\n\nIs this correct?`;
-    }
-    return `\n🤖 *AI detected a transaction:*\n\n${data.type === 'income' ? '💰' : '💸'} *${data.type === 'income' ? 'Income' : 'Expense'}*\n📌 ${data.type === 'income' ? 'Source' : 'Category'}: *${data.category}*\n💵 Amount: *${fmt(data.amount)}*\n🏦 Account: *${data.account}*\n📝 Note: ${data.note || '-'}\n\nIs this correct?`;
-  },
+  aiTransactionDetected: (data) => `
+🤖 *AI detected a transaction:*
+
+${data.type === 'income' ? '💰' : '💸'} *${data.type === 'income' ? 'Income' : 'Expense'}*
+📌 ${data.type === 'income' ? 'Source' : 'Category'}: *${data.category}*
+💵 Amount: *Rp ${formatNumber(data.amount)}*
+🏦 Account: *${data.account}*
+📝 Note: ${data.note || '-'}
+
+Is this correct?`,
 
   aiError: '❌ AI could not process this message. Please try again!',
 
