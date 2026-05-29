@@ -1,6 +1,6 @@
 /**
  * MoneyFlowID Bot — Entry Point
- * Bot Telegram Pencatatan Keuangan dengan ChatGPT AI & Google Sheets
+ * Bot Telegram Pencatatan Keuangan dengan Gemini AI & Google Sheets
  *
  * @author   Ikhsanh
  * @telegram @ikhsanh
@@ -321,7 +321,7 @@ bot.on('message', async (msg) => {
         if (!user || !user.setupComplete) break;
 
         // Di IDLE, coba parse sebagai transaksi natural language
-        const IDLE_KEYWORDS = /[0-9]|rb|ribu|jt|juta|beli|bayar|makan|dapat|gaji|terima|income|expense|belanja|tarik|ambil|transfer|tf\b|withdraw|paylater|cicilan|nyicil|kredit|kredivo|akulaku|spaylater/i;
+        const IDLE_KEYWORDS = /[0-9]|rb|ribu|jt|juta|beli|bayar|makan|dapat|gaji|terima|income|expense|belanja/i;
         if (IDLE_KEYWORDS.test(msg.text)) {
           // Aktifkan AI chat SEMENTARA, proses pesan, lalu kembali ke IDLE
           session.setState(userId, STATES.AI_CHAT);
@@ -1202,8 +1202,7 @@ function checkSetup(bot, msg) {
 bot.getMe().then((me) => {
   console.log(`✅ Bot @${me.username} berjalan!`);
   console.log(`📊 Google Credentials: ${process.env.GOOGLE_CREDENTIALS_PATH}`);
-  console.log(`🤖 Groq AI: ${process.env.GROQ_API_KEY ? 'Configured' : '⚠️ NOT SET (set GROQ_API_KEY di .env)'}`);
-
+  console.log(`🤖 Gemini AI: ${process.env.GEMINI_API_KEY ? 'Configured' : '⚠️ NOT SET'}`);
   console.log(`⏰ Timezone: ${process.env.TIMEZONE || 'Asia/Jakarta'}`);
   console.log('─'.repeat(50));
   console.log('MoneyFlowID Bot siap menerima pesan!');
