@@ -23,9 +23,13 @@ async function handleStart(bot, msg) {
   let user = userStore.getUser(userId);
 
   if (user && user.setupComplete) {
-    // User sudah setup — tampilkan menu utama
+    // User sudah setup — tampilkan info + menu utama
     const t = L(user.lang);
-    await bot.sendMessage(msg.chat.id, t.mainMenu, {
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${user.spreadsheetId}`;
+    const info = user.lang === 'id'
+      ? `🏠 *Menu Utama MoneyFlowID*\n\n👤 *${user.name}*\n📊 Spreadsheet: [Buka Spreadsheet](${sheetUrl})\n\nPilih menu:`
+      : `🏠 *MoneyFlowID Main Menu*\n\n👤 *${user.name}*\n📊 Spreadsheet: [Open Spreadsheet](${sheetUrl})\n\nChoose menu:`;
+    await bot.sendMessage(msg.chat.id, info, {
       parse_mode: 'Markdown',
       reply_markup: mainMenuKeyboard(user.lang),
     });

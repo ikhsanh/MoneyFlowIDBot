@@ -704,7 +704,49 @@ function formatDate(date) {
   const d = String(date.getDate()).padStart(2, '0');
   const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][date.getMonth()];
   const y = String(date.getFullYear()).slice(-2);
-  return `${d} ${m} ${y}`;
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  return `${d} ${m} ${y} ${hh}:${mm}`;
+}
+
+/**
+ * Parse date string "DD Mon YY HH:MM" back to Date for sorting
+ */
+function parseDateStr(str) {
+  if (!str) return new Date(0);
+  const months = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
+  const parts = str.trim().split(' ');
+  if (parts.length < 3) return new Date(0);
+  const d = parseInt(parts[0]);
+  const m = months[parts[1]] ?? 0;
+  const y = 2000 + parseInt(parts[2]);
+  let hh = 0, mm = 0;
+  if (parts[3] && parts[3].includes(':')) {
+    [hh, mm] = parts[3].split(':').map(Number);
+  }
+  return new Date(y, m, d, hh, mm);
+}
+
+/**
+ * Sort transaction rows by date (ascending) in the sheet
+ */
+async function sortTransactions(spreadsheetId, sheetName, totalRows) {
+  const lastRow = totalRows;
+  if (lastRow <= 2) return; // nothing to sort
+
+  const data = await readRange(spreadsheetId, `'${sheetName}'!H2:N${lastRow}`);
+  if (!data || data.length <= 1) return;
+
+  // Sort by date column (index 0)
+  data.sort((a, b) => parseDateStr(a[0]) - parseDateStr(b[0]));
+
+  const sheets = await getSheetsClient();
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${sheetName}'!H2:N${lastRow}`,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values: data },
+  });
 }
 
 /**
@@ -748,6 +790,9 @@ async function addTransaction(spreadsheetId, tx) {
     valueInputOption: 'USER_ENTERED',
     resource: { values: [row] },
   });
+
+  // Sort transaksi berdasarkan tanggal (ascending)
+  await sortTransactions(spreadsheetId, sheetName, nextRow);
 
   // Jika Piutang Baru — tambah nama ke piutang section
   if (tx.cashflow === 'Piutang Baru' && tx.category) {
@@ -1018,6 +1063,263 @@ async function setSpendingBudget(spreadsheetId, categoryName, amount) {
   });
 }
 
+// =============================================
+// MONTHLY FINANCIAL SUMMARY SHEET
+// =============================================
+
+/**
+ * Buat atau update sheet "Monthly Financial Summary"
+ * Berisi ringkasan bulanan, spending breakdown, dan data untuk chart
+ */
+async function createMonthlySummarySheet(spreadsheetId, userData) {
+  const SUMMARY_SHEET = 'Monthly Financial Summary';
+  const meta = await getSheetsMeta(spreadsheetId);
+  const sheetId = await ensureSheet(spreadsheetId, SUMMARY_SHEET, meta);
+
+  const now = new Date();
+  const monthSheet = getMonthlySheetName(now);
+  const monthLabel = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+  const accounts = userData.accounts || [];
+  const categories = userData.spendingCategories || [];
+  const bills = userData.bills || [];
+
+  // Helper: reference ke monthly sheet
+  const ref = (cell) => `'${monthSheet}'!${cell}`;
+
+  const ranges = [];
+
+  // ── ROW 1: Title ──
+  ranges.push({ range: `'${SUMMARY_SHEET}'!A1`, values: [[`📊 Monthly Financial Summary — ${monthLabel}`]] });
+
+  // ── ROW 3-12: Monthly Statement ──
+  ranges.push({ range: `'${SUMMARY_SHEET}'!A3:C3`, values: [['📋 Monthly Statement', '', 'Amount']] });
+  const stmtRows = [
+    ['💰 Total Income', '', `=${ref('D6')}`],
+    ['💸 Total Spending', '', `=${ref('D14')}`],
+    ['📅 Bills Paid', '', `=${ref('D9')}`],
+    ['🎯 Sinking Fund Saved', '', `=${ref('D10')}`],
+    ['📈 Financial Goals', '', `=${ref('D11')}`],
+    ['💳 Cicilan/Utang Paid', '', `=${ref('D12')}`],
+    ['💼 Akumulasi Piutang', '', `=${ref('D13')}`],
+    ['💵 Sisa Uang', '', `=${ref('D15')}`],
+    ['📊 Savings Rate', '', `=IFERROR(ROUND((C4-C5)/C4*100${SEP}0)&"%"${SEP}"0%")`],
+  ];
+  ranges.push({ range: `'${SUMMARY_SHEET}'!A4:C12`, values: stmtRows });
+
+  // ── ROW 14-30: Spending Breakdown ──
+  ranges.push({ range: `'${SUMMARY_SHEET}'!A14:E14`, values: [['🛍️ Spending per Kategori', '', 'Budget', 'Spent', 'Remaining']] });
+  const spendRows = [];
+  for (let i = 0; i < categories.length && i < 15; i++) {
+    const catRow = R.SPENDING_START + i;
+    spendRows.push([
+      categories[i].emoji + ' ' + categories[i].name,
+      '',
+      `=${ref(`C${catRow}`)}`,
+      `=${ref(`D${catRow}`)}`,
+      `=${ref(`E${catRow}`)}`,
+    ]);
+  }
+  if (spendRows.length > 0) {
+    ranges.push({ range: `'${SUMMARY_SHEET}'!A15:E${14 + spendRows.length}`, values: spendRows });
+  }
+  const spendTotalRow = 15 + spendRows.length;
+  ranges.push({ range: `'${SUMMARY_SHEET}'!A${spendTotalRow}:E${spendTotalRow}`, values: [['TOTAL', '', `=SUM(C15:C${spendTotalRow - 1})`, '', `=SUM(E15:E${spendTotalRow - 1})`]] });
+
+  // ── Account Balances ──
+  const acctStartRow = spendTotalRow + 2;
+  ranges.push({ range: `'${SUMMARY_SHEET}'!A${acctStartRow}:C${acctStartRow}`, values: [['🏦 Saldo Akun', '', 'Balance']] });
+  const acctRows = [];
+  for (let i = 0; i < accounts.length && i < 15; i++) {
+    const acctRow = R.ACCT_START + i;
+    acctRows.push([
+      accounts[i].emoji + ' ' + accounts[i].name,
+      '',
+      `=${ref(`E${acctRow}`)}`,
+    ]);
+  }
+  if (acctRows.length > 0) {
+    ranges.push({ range: `'${SUMMARY_SHEET}'!A${acctStartRow + 1}:C${acctStartRow + acctRows.length}`, values: acctRows });
+  }
+  const acctTotalRow = acctStartRow + acctRows.length + 1;
+  ranges.push({ range: `'${SUMMARY_SHEET}'!A${acctTotalRow}:C${acctTotalRow}`, values: [['TOTAL', '', `=SUM(C${acctStartRow + 1}:C${acctTotalRow - 1})`]] });
+
+  // ── Chart Data (right side) for pie chart ──
+  ranges.push({ range: `'${SUMMARY_SHEET}'!G3:H3`, values: [['Kategori', 'Amount']] });
+  const chartDataRows = categories.slice(0, 15).map((cat, i) => [
+    cat.name,
+    `=${ref(`D${R.SPENDING_START + i}`)}`,
+  ]);
+  if (chartDataRows.length > 0) {
+    ranges.push({ range: `'${SUMMARY_SHEET}'!G4:H${3 + chartDataRows.length}`, values: chartDataRows });
+  }
+
+  // ── Chart Data for bar comparison ──
+  const barStartRow = 3 + chartDataRows.length + 2;
+  ranges.push({ range: `'${SUMMARY_SHEET}'!G${barStartRow}:H${barStartRow}`, values: [['Cashflow', 'Amount']] });
+  const barData = [
+    ['Income', `=${ref('D6')}`],
+    ['Spending', `=${ref('D14')}`],
+    ['Bills', `=${ref('D9')}`],
+    ['Cicilan/Utang', `=${ref('D12')}`],
+    ['Savings', `=C4-C5-C6`],
+  ];
+  ranges.push({ range: `'${SUMMARY_SHEET}'!G${barStartRow + 1}:H${barStartRow + 5}`, values: barData });
+
+  // Write all data
+  await writeMultipleRanges(spreadsheetId, ranges);
+
+  // Add charts
+  await addSummaryCharts(spreadsheetId, sheetId, chartDataRows.length, barStartRow);
+
+  // Apply formatting & colors
+  await formatSummarySheet(spreadsheetId, sheetId, spendRows.length, acctStartRow, acctRows.length);
+
+  return { sheetName: SUMMARY_SHEET, sheetId };
+}
+
+/**
+ * Apply formatting & colors to summary sheet
+ */
+async function formatSummarySheet(spreadsheetId, sheetId, spendCount, acctStartRow, acctCount) {
+  const sheetsClient = await getSheetsClient();
+
+  // Color helpers
+  const rgb = (r, g, b) => ({ red: r/255, green: g/255, blue: b/255 });
+  const white = rgb(255, 255, 255);
+  const darkBlue = rgb(26, 35, 126);
+  const lightBlue = rgb(227, 242, 253);
+  const darkGreen = rgb(27, 94, 32);
+  const lightGreen = rgb(232, 245, 233);
+  const darkOrange = rgb(230, 81, 0);
+  const lightOrange = rgb(255, 243, 224);
+  const darkPurple = rgb(74, 20, 140);
+  const lightPurple = rgb(243, 229, 245);
+
+  const bold = { bold: true };
+  const centerAlign = { horizontalAlignment: 'CENTER' };
+
+  const requests = [];
+
+  // Background keseluruhan — matcha green
+  const matcha = rgb(234, 245, 234);
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: 0, endRowIndex: 50, startColumnIndex: 0, endColumnIndex: 15 }, cell: { userEnteredFormat: { backgroundColor: matcha } }, fields: 'userEnteredFormat(backgroundColor)' } });
+
+  // Title row (row 0)
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 6 }, cell: { userEnteredFormat: { backgroundColor: darkBlue, textFormat: { ...bold, foregroundColor: white, fontSize: 13 } } }, fields: 'userEnteredFormat(backgroundColor,textFormat)' } });
+
+  // Monthly Statement header (row 2)
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: 2, endRowIndex: 3, startColumnIndex: 0, endColumnIndex: 4 }, cell: { userEnteredFormat: { backgroundColor: darkGreen, textFormat: { ...bold, foregroundColor: white, fontSize: 10 } } }, fields: 'userEnteredFormat(backgroundColor,textFormat)' } });
+
+  // Monthly Statement rows (rows 3-11)
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: 3, endRowIndex: 12, startColumnIndex: 0, endColumnIndex: 4 }, cell: { userEnteredFormat: { backgroundColor: lightGreen } }, fields: 'userEnteredFormat(backgroundColor)' } });
+
+  // Spending header (row 13)
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: 13, endRowIndex: 14, startColumnIndex: 0, endColumnIndex: 5 }, cell: { userEnteredFormat: { backgroundColor: darkOrange, textFormat: { ...bold, foregroundColor: white, fontSize: 10 } } }, fields: 'userEnteredFormat(backgroundColor,textFormat)' } });
+
+  // Spending rows
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: 14, endRowIndex: 14 + spendCount, startColumnIndex: 0, endColumnIndex: 5 }, cell: { userEnteredFormat: { backgroundColor: lightOrange } }, fields: 'userEnteredFormat(backgroundColor)' } });
+
+  // Spending total row
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: 14 + spendCount, endRowIndex: 15 + spendCount, startColumnIndex: 0, endColumnIndex: 5 }, cell: { userEnteredFormat: { backgroundColor: darkOrange, textFormat: { ...bold, foregroundColor: white } } }, fields: 'userEnteredFormat(backgroundColor,textFormat)' } });
+
+  // Account header
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: acctStartRow - 1, endRowIndex: acctStartRow, startColumnIndex: 0, endColumnIndex: 4 }, cell: { userEnteredFormat: { backgroundColor: darkPurple, textFormat: { ...bold, foregroundColor: white, fontSize: 10 } } }, fields: 'userEnteredFormat(backgroundColor,textFormat)' } });
+
+  // Account rows
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: acctStartRow, endRowIndex: acctStartRow + acctCount, startColumnIndex: 0, endColumnIndex: 4 }, cell: { userEnteredFormat: { backgroundColor: lightPurple } }, fields: 'userEnteredFormat(backgroundColor)' } });
+
+  // Account total row
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: acctStartRow + acctCount, endRowIndex: acctStartRow + acctCount + 1, startColumnIndex: 0, endColumnIndex: 4 }, cell: { userEnteredFormat: { backgroundColor: darkPurple, textFormat: { ...bold, foregroundColor: white } } }, fields: 'userEnteredFormat(backgroundColor,textFormat)' } });
+
+  // Chart data header (G3)
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: 2, endRowIndex: 3, startColumnIndex: 6, endColumnIndex: 8 }, cell: { userEnteredFormat: { backgroundColor: darkBlue, textFormat: { ...bold, foregroundColor: white } } }, fields: 'userEnteredFormat(backgroundColor,textFormat)' } });
+
+  // Chart data rows (G4:H...)
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: 3, endRowIndex: 3 + spendCount, startColumnIndex: 6, endColumnIndex: 8 }, cell: { userEnteredFormat: { backgroundColor: lightBlue } }, fields: 'userEnteredFormat(backgroundColor)' } });
+
+  // Column widths
+  requests.push({ updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: 1 }, properties: { pixelSize: 200 }, fields: 'pixelSize' } });
+  requests.push({ updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 2, endIndex: 5 }, properties: { pixelSize: 130 }, fields: 'pixelSize' } });
+
+  // Number format for currency columns (C, D, E)
+  requests.push({ repeatCell: { range: { sheetId, startRowIndex: 3, endRowIndex: acctStartRow + acctCount + 1, startColumnIndex: 2, endColumnIndex: 5 }, cell: { userEnteredFormat: { numberFormat: { type: 'CURRENCY', pattern: 'Rp#,##0' } } }, fields: 'userEnteredFormat(numberFormat)' } });
+
+  try {
+    await sheetsClient.spreadsheets.batchUpdate({ spreadsheetId, resource: { requests } });
+  } catch (e) {
+    log.warn('Summary formatting failed (non-critical):', e.message);
+  }
+}
+
+/**
+ * Add pie chart and bar chart to the summary sheet
+ */
+async function addSummaryCharts(spreadsheetId, sheetId, categoryCount, barStartRow) {
+  const sheetsClient = await getSheetsClient();
+
+  // Delete existing charts on this sheet first
+  try {
+    const spreadsheet = await sheetsClient.spreadsheets.get({ spreadsheetId });
+    const existingCharts = (spreadsheet.data.sheets || [])
+      .find(s => s.properties.sheetId === sheetId)?.charts || [];
+    if (existingCharts.length > 0) {
+      await sheetsClient.spreadsheets.batchUpdate({
+        spreadsheetId,
+        resource: {
+          requests: existingCharts.map(c => ({ deleteEmbeddedObject: { objectId: c.chartId } })),
+        },
+      });
+    }
+  } catch (e) { /* ignore */ }
+
+  const requests = [];
+
+  // Pie Chart — Spending per kategori
+  requests.push({
+    addChart: {
+      chart: {
+        position: { overlayPosition: { anchorCell: { sheetId, rowIndex: 2, columnIndex: 9 }, offsetXPixels: 0, offsetYPixels: 0, widthPixels: 500, heightPixels: 350 } },
+        spec: {
+          title: 'Spending per Kategori',
+          pieChart: {
+            legendPosition: 'RIGHT_LEGEND',
+            domain: { sourceRange: { sources: [{ sheetId, startRowIndex: 3, endRowIndex: 3 + categoryCount, startColumnIndex: 6, endColumnIndex: 7 }] } },
+            series: { sourceRange: { sources: [{ sheetId, startRowIndex: 3, endRowIndex: 3 + categoryCount, startColumnIndex: 7, endColumnIndex: 8 }] } },
+          },
+        },
+      },
+    },
+  });
+
+  // Bar Chart — Cashflow comparison
+  requests.push({
+    addChart: {
+      chart: {
+        position: { overlayPosition: { anchorCell: { sheetId, rowIndex: 18, columnIndex: 9 }, offsetXPixels: 0, offsetYPixels: 0, widthPixels: 500, heightPixels: 300 } },
+        spec: {
+          title: 'Perbandingan Cashflow',
+          basicChart: {
+            chartType: 'COLUMN',
+            legendPosition: 'NO_LEGEND',
+            domains: [{ domain: { sourceRange: { sources: [{ sheetId, startRowIndex: barStartRow, endRowIndex: barStartRow + 5, startColumnIndex: 6, endColumnIndex: 7 }] } } }],
+            series: [{ series: { sourceRange: { sources: [{ sheetId, startRowIndex: barStartRow, endRowIndex: barStartRow + 5, startColumnIndex: 7, endColumnIndex: 8 }] } } }],
+          },
+        },
+      },
+    },
+  });
+
+  try {
+    await sheetsClient.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: { requests },
+    });
+  } catch (e) {
+    log.warn('Chart creation failed (non-critical):', e.message);
+  }
+}
+
 module.exports = {
   getServiceAccountEmail,
   validateSpreadsheet,
@@ -1035,5 +1337,6 @@ module.exports = {
   syncBillsToSheet,
   getSpendingBudgets,
   setSpendingBudget,
+  createMonthlySummarySheet,
   R, // export untuk keperluan lain
 };

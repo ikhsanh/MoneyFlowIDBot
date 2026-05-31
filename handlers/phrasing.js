@@ -32,9 +32,16 @@ function buildParseTransactionPrompt(message, userCtx, lang = 'id') {
   const categoryNames = spendingCategories.map(c => c.name).join(', ');
   const sourceNames = incomeSources.map(s => s.name).join(', ');
 
+  const now = new Date();
+  const todayStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: process.env.TIMEZONE || 'Asia/Jakarta' });
+  const isoToday = now.toISOString().slice(0, 10);
+
   return `${SECURITY_RULES}
 
 You are a financial transaction parser for an Indonesian personal finance bot.
+
+Current date/time: ${todayStr}, ${timeStr} (${isoToday})
 
 User message: "${message}"
 
@@ -54,6 +61,7 @@ Rules:
   "category": "<best matching category from list above>",
   "account": "<source account from list above, or 'Cash' if unclear>",
   "toAccount": "<destination account for transfers, omit if not transfer>",
+  "date": "<ISO date string YYYY-MM-DD, calculate from relative words like 'kemarin', '2 hari lalu', 'tanggal 13'. Default to today: ${isoToday}>",
   "note": "<brief description>",
   "confidence": <0.0 to 1.0>
 }
@@ -74,6 +82,14 @@ PHRASING & ABBREVIATIONS:
 - Common expense words: beli, makan, jajan, bensin, tagihan, ongkir, parkir
 - IMPORTANT: "bayar" + paylater name = pelunasan_utang (NOT expense). "bayar" + other (makan, listrik, etc) = expense.
 - Common income words: terima, dapat, gaji, bayaran, pemasukan, masuk, cair
+
+DATE PARSING (today is ${isoToday}):
+- No date mentioned = today (${isoToday})
+- "kemarin" / "yesterday" = yesterday
+- "2 hari lalu" / "3 hari yang lalu" = N days ago from today
+- "tanggal 13" / "tgl 13" / "13 mei" = specific date (use current month/year if not specified)
+- "minggu lalu" = 7 days ago
+- Always return date as YYYY-MM-DD format
 
 Return ONLY valid JSON, no markdown, no explanation.`;
 }

@@ -224,6 +224,7 @@ function reportKeyboard(lang = 'id') {
       ],
       [
         { text: isId ? '🤖 Insight AI' : '🤖 AI Insight', callback_data: 'report:insight' },
+        { text: isId ? '📊 Summary' : '📊 Summary', callback_data: 'report:summary' },
       ],
       [
         { text: isId ? '◀️ Menu Utama' : '◀️ Main Menu', callback_data: 'menu:main' },

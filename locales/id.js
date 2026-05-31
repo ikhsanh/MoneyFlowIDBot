@@ -385,6 +385,7 @@ ${data.type === 'income' ? '💰' : data.type === 'transfer' ? '↔️' : data.t
 📌 ${data.type === 'income' ? 'Sumber' : 'Kategori'}: *${data.category}*
 💵 Nominal: *Rp ${formatNumber(data.amount)}*
 🏦 ${data.type === 'transfer' ? `Dari: *${data.account}* → Ke: *${data.toAccount}*` : `Akun: *${data.account}*`}
+📅 Tanggal: *${data.date ? new Date(data.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}* jam *${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}*
 📝 Catatan: ${data.note || '-'}
 
 Apakah ini benar?`,

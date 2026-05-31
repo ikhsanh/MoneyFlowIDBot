@@ -496,6 +496,7 @@ bot.on('callback_query', async (callbackQuery) => {
         case 'balance': await reportHandler.showBalance(bot, chatId, userId); break;
         case 'bills': await reportHandler.showBillsStatus(bot, chatId, userId); break;
         case 'insight': await reportHandler.showAiInsight(bot, chatId, userId); break;
+        case 'summary': await reportHandler.showMonthlySummary(bot, chatId, userId); break;
       }
       return;
     }
