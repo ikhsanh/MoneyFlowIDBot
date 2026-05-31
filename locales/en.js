@@ -384,6 +384,7 @@ ${data.type === 'income' ? '💰' : data.type === 'transfer' ? '↔️' : data.t
 📌 ${data.type === 'income' ? 'Source' : 'Category'}: *${data.category}*
 💵 Amount: *Rp ${formatNumber(data.amount)}*
 🏦 ${data.type === 'transfer' ? `From: *${data.account}* → To: *${data.toAccount}*` : `Account: *${data.account}*`}
+📅 Date: *${data.date ? new Date(data.date).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}* at *${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}*
 📝 Note: ${data.note || '-'}
 
 Is this correct?`,

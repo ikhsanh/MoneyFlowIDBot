@@ -64,6 +64,70 @@ bot.onText(/\/start/, async (msg) => {
   }
 });
 
+bot.onText(/\/fitur/, async (msg) => {
+  const user = userStore.getUser(msg.from.id);
+  const isId = !user || user.lang === 'id';
+  const text = isId
+    ? `🚀 *Fitur MoneyFlowID Bot*
+
+📊 *Pencatatan Transaksi*
+• 💰 Pemasukan — Catat income dari berbagai sumber
+• 💸 Pengeluaran — Per kategori (Makan, Transport, dll)
+• ↔️ Transfer — Pindah saldo antar akun
+• 📅 Bayar Tagihan — Tracking bulanan (Netflix, dll)
+• 💳 Utang/Paylater — Catat & tracking pelunasan
+• 💼 Piutang — Catat pinjaman yang diberikan
+
+🤖 *AI-Powered (Gemini/ChatGPT/Groq)*
+• Chat natural language → otomatis catat transaksi
+• Smart phrasing: "tf" (transfer), "tarik tunai", "spaylater" (utang), "bayar spaylater" (pelunasan)
+• Custom tanggal: "kemarin", "2 hari lalu", "tanggal 13"
+• AI Financial Insight & analisis keuangan
+• Anti-prompt-injection (aman dari manipulasi)
+
+📈 *Laporan & Analytics*
+• Monthly Report & Category Breakdown
+• Monthly Financial Summary + Chart (Pie & Bar)
+• Saldo real-time semua akun
+• Status tagihan bulanan
+
+⚙️ *Pengaturan*
+• Pilih AI Service (Gemini/ChatGPT/Groq)
+• Kelola akun, kategori, sumber income, tagihan
+• Bilingual (ID/EN)
+• Google Sheets auto-sync`
+    : `🚀 *MoneyFlowID Bot Features*
+
+📊 *Transaction Recording*
+• 💰 Income — Record from various sources
+• 💸 Expenses — By category (Food, Transport, etc)
+• ↔️ Transfer — Move balance between accounts
+• 📅 Bills — Monthly tracking (Netflix, etc)
+• 💳 Debt/Paylater — Record & track payments
+• 💼 Receivables — Track loans given
+
+🤖 *AI-Powered (Gemini/ChatGPT/Groq)*
+• Natural language → auto-record transactions
+• Smart phrasing: "tf" (transfer), "tarik tunai", "spaylater" (debt), "bayar spaylater" (payment)
+• Custom dates: "yesterday", "2 days ago", "on the 13th"
+• AI Financial Insight & analysis
+• Anti-prompt-injection (secure)
+
+📈 *Reports & Analytics*
+• Monthly Report & Category Breakdown
+• Monthly Financial Summary + Charts (Pie & Bar)
+• Real-time balance all accounts
+• Monthly bill status
+
+⚙️ *Settings*
+• Choose AI Service (Gemini/ChatGPT/Groq)
+• Manage accounts, categories, income sources, bills
+• Bilingual (ID/EN)
+• Google Sheets auto-sync`;
+
+  await bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
+});
+
 bot.onText(/\/menu/, async (msg) => {
   try {
     await startHandler.handleMenu(bot, msg);
@@ -496,6 +560,7 @@ bot.on('callback_query', async (callbackQuery) => {
         case 'balance': await reportHandler.showBalance(bot, chatId, userId); break;
         case 'bills': await reportHandler.showBillsStatus(bot, chatId, userId); break;
         case 'insight': await reportHandler.showAiInsight(bot, chatId, userId); break;
+        case 'summary': await reportHandler.showMonthlySummary(bot, chatId, userId); break;
       }
       return;
     }

@@ -23,9 +23,23 @@ async function handleStart(bot, msg) {
   let user = userStore.getUser(userId);
 
   if (user && user.setupComplete) {
-    // User sudah setup — tampilkan menu utama
+    // User sudah setup — tampilkan info + menu utama
     const t = L(user.lang);
-    await bot.sendMessage(msg.chat.id, t.mainMenu, {
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${user.spreadsheetId}`;
+    const totalBalance = (user.accounts || []).reduce((s, a) => s + (a.balance || 0), 0);
+    const fmtBal = `Rp ${Math.round(totalBalance).toLocaleString('id-ID')}`;
+
+    // Hitung pengeluaran bulan ini dari transaksi di sheets (approx dari local data)
+    const now = new Date();
+    let transactions = [];
+    try { transactions = await sheets.getTransactions(user.spreadsheetId, now.getMonth() + 1, now.getFullYear()); } catch {}
+    const monthlySpending = (transactions || []).filter(tx => tx.type === 'expense').reduce((s, tx) => s + (tx.amount || 0), 0);
+    const fmtSpend = `Rp ${Math.round(monthlySpending).toLocaleString('id-ID')}`;
+
+    const info = user.lang === 'id'
+      ? `🏠 *Menu Utama MoneyFlowID*\n\n👤 *${user.name}*\n💰 Saldo: *${fmtBal}*\n💸 Pengeluaran bulan ini: *${fmtSpend}*\n📊 Spreadsheet: [Buka Spreadsheet](${sheetUrl})\n\nKetik /fitur untuk melihat fitur yang ada\n\nPilih menu:`
+      : `🏠 *MoneyFlowID Main Menu*\n\n👤 *${user.name}*\n💰 Balance: *${fmtBal}*\n💸 Spending this month: *${fmtSpend}*\n📊 Spreadsheet: [Open Spreadsheet](${sheetUrl})\n\nType /fitur to see available features\n\nChoose menu:`;
+    await bot.sendMessage(msg.chat.id, info, {
       parse_mode: 'Markdown',
       reply_markup: mainMenuKeyboard(user.lang),
     });

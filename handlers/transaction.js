@@ -881,6 +881,7 @@ async function saveAiTransaction(bot, callbackQuery) {
     category,
     dari,
     ke,
+    date:     ai.date || null,
   };
 
   log.debug(`AI Transaction mapped:`, { type, cashflow: tx.cashflow, category: tx.category, amount: tx.amount, dari: tx.dari, ke: tx.ke, name: tx.name });

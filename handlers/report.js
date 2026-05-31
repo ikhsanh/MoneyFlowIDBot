@@ -425,6 +425,38 @@ async function handleAiMessage(bot, msg) {
   }
 }
 
+// =============================================
+// MONTHLY FINANCIAL SUMMARY
+// =============================================
+
+async function showMonthlySummary(bot, chatId, userId) {
+  const user = userStore.getUser(userId);
+  const t = L(user.lang);
+
+  const loadMsg = await bot.sendMessage(chatId, user.lang === 'id' ? '📊 Membuat Monthly Financial Summary...' : '📊 Creating Monthly Financial Summary...', { parse_mode: 'Markdown' });
+
+  try {
+    await sheets.createMonthlySummarySheet(user.spreadsheetId, user);
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${user.spreadsheetId}/edit#gid=`;
+    const msg = user.lang === 'id'
+      ? `✅ *Monthly Financial Summary* berhasil dibuat/diupdate!\n\n📊 [Buka Spreadsheet](${sheetUrl})\n\nSheet berisi:\n• Ringkasan bulanan (income, spending, bills, utang)\n• Breakdown spending per kategori\n• Saldo semua akun\n• Pie chart & bar chart`
+      : `✅ *Monthly Financial Summary* created/updated!\n\n📊 [Open Spreadsheet](${sheetUrl})\n\nSheet contains:\n• Monthly statement (income, spending, bills, debt)\n• Spending breakdown by category\n• All account balances\n• Pie chart & bar chart`;
+
+    await bot.editMessageText(msg, {
+      chat_id: chatId,
+      message_id: loadMsg.message_id,
+      parse_mode: 'Markdown',
+      reply_markup: backToMenuKeyboard(user.lang),
+    });
+  } catch (err) {
+    log.error('Monthly Summary error:', err.message);
+    await bot.editMessageText(user.lang === 'id' ? '❌ Gagal membuat summary. Coba lagi.' : '❌ Failed to create summary. Try again.', {
+      chat_id: chatId,
+      message_id: loadMsg.message_id,
+    });
+  }
+}
+
 module.exports = {
   showReportMenu,
   showMonthlyReport,
@@ -433,6 +465,7 @@ module.exports = {
   showBillsStatus,
   handleBillPayToggle,
   showAiInsight,
+  showMonthlySummary,
   startAiChat,
   handleAiMessage,
 };
