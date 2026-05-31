@@ -5,9 +5,12 @@
 
 const userStore = require('../services/userStore');
 const sheets = require('../services/sheets');
+const { createLogger } = require('../services/logger');
 const session = require('../middleware/session');
 const { STATES } = require('../middleware/session');
 const L = require('../locales');
+
+const log = createLogger('Budget');
 
 /**
  * Parse nominal dari input user
@@ -47,7 +50,7 @@ async function showBudgetMenu(bot, chatId, userId) {
   try {
     currentBudgets = await sheets.getSpendingBudgets(user.spreadsheetId);
   } catch (e) {
-    console.error('getSpendingBudgets error:', e.message);
+    log.error('getSpendingBudgets error:', e.message);
   }
 
   const keyboard = cats.map(cat => {
@@ -150,7 +153,7 @@ async function handleBudgetAmount(bot, msg) {
 
     await bot.sendMessage(chatId, successText, { parse_mode: 'Markdown' });
   } catch (err) {
-    console.error('Budget save error:', err.message);
+    log.error('Budget save error:', err.message);
     const errText = user.lang === 'id'
       ? '❌ Gagal menyimpan budget. Pastikan spreadsheet bisa diakses dan kategori sudah diinisialisasi.'
       : '❌ Failed to save budget. Make sure the spreadsheet is accessible.';
@@ -176,7 +179,7 @@ async function handleBudgetClear(bot, callbackQuery, categoryName) {
     // Kembali ke menu budget
     await showBudgetMenu(bot, chatId, userId);
   } catch (err) {
-    console.error('Budget clear error:', err.message);
+    log.error('Budget clear error:', err.message);
     await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ Gagal hapus budget' });
   }
 }

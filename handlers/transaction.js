@@ -6,8 +6,11 @@
 
 const userStore = require('../services/userStore');
 const sheets = require('../services/sheets');
+const { createLogger } = require('../services/logger');
 const session = require('../middleware/session');
 const { STATES } = require('../middleware/session');
+
+const log = createLogger('Transaction');
 const {
   cashflowKeyboard,
   incomeSourceSelectKeyboard,
@@ -133,7 +136,7 @@ async function handleIncomeConfirm(bot, callbackQuery) {
       parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user.lang),
     });
   } catch (err) {
-    console.error('Income confirm error:', err.message);
+    log.error('Income confirm error:', err.message);
     await bot.sendMessage(chatId, t.processingError, { parse_mode: 'Markdown' });
     session.clearSession(userId);
   }
@@ -245,7 +248,7 @@ async function handleExpenseConfirm(bot, callbackQuery) {
       parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user.lang),
     });
   } catch (err) {
-    console.error('Expense confirm error:', err.message);
+    log.error('Expense confirm error:', err.message);
     await bot.sendMessage(chatId, t.processingError, { parse_mode: 'Markdown' });
     session.clearSession(userId);
   }
@@ -360,7 +363,7 @@ async function handleTransferConfirm(bot, callbackQuery) {
       parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user.lang),
     });
   } catch (err) {
-    console.error('Transfer confirm error:', err.message);
+    log.error('Transfer confirm error:', err.message);
     await bot.sendMessage(chatId, t.processingError, { parse_mode: 'Markdown' });
     session.clearSession(userId);
   }
@@ -453,7 +456,7 @@ async function handleBillConfirm(bot, callbackQuery) {
       parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user.lang),
     });
   } catch (err) {
-    console.error('Bill payment error:', err.message);
+    log.error('Bill payment error:', err.message);
     await bot.sendMessage(chatId, t.processingError, { parse_mode: 'Markdown' });
     session.clearSession(userId);
   }
@@ -550,7 +553,7 @@ async function handlePiutangConfirm(bot, callbackQuery) {
       parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user.lang),
     });
   } catch (err) {
-    console.error('Piutang error:', err.message);
+    log.error('Piutang error:', err.message);
     await bot.sendMessage(chatId, t.processingError, { parse_mode: 'Markdown' });
     session.clearSession(userId);
   }
@@ -634,7 +637,7 @@ async function handleLunasPiutangConfirm(bot, callbackQuery) {
       parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user.lang),
     });
   } catch (err) {
-    console.error('Lunas piutang error:', err.message);
+    log.error('Lunas piutang error:', err.message);
     await bot.sendMessage(chatId, t.processingError, { parse_mode: 'Markdown' });
     session.clearSession(userId);
   }
@@ -729,7 +732,7 @@ async function handleUtangConfirm(bot, callbackQuery) {
       parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user.lang),
     });
   } catch (err) {
-    console.error('Utang error:', err.message);
+    log.error('Utang error:', err.message);
     await bot.sendMessage(chatId, t.processingError, { parse_mode: 'Markdown' });
     session.clearSession(userId);
   }
@@ -813,7 +816,7 @@ async function handleLunasUtangConfirm(bot, callbackQuery) {
       parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user.lang),
     });
   } catch (err) {
-    console.error('Lunas utang error:', err.message);
+    log.error('Lunas utang error:', err.message);
     await bot.sendMessage(chatId, t.processingError, { parse_mode: 'Markdown' });
     session.clearSession(userId);
   }
@@ -838,26 +841,49 @@ async function saveAiTransaction(bot, callbackQuery) {
 
   const ai = data.aiTransaction;
 
-  // ── Map field Gemini → field transaksi ─────────────────────────────────
-  // Gemini returns: { isTransaction, type, amount, category, account, note, confidence }
-  // kita butuh:     { cashflow, name, amount, category, dari, ke }
-  const isIncome = (ai.type || '').toLowerCase() === 'income';
-  const cashflow = isIncome ? 'Income' : 'Spending';
+  // ── Map field AI → field transaksi ─────────────────────────────────
+  const type = (ai.type || '').toLowerCase();
+  let cashflow, dari, ke, category;
   const accountName = ai.account || (user.accounts[0]?.name || 'Cash');
-  const dari = isIncome ? '' : accountName;
-  const ke   = isIncome ? accountName : '';
 
-  // Gunakan field yang sudah dipetakan (support both formats)
+  if (type === 'income') {
+    cashflow = 'Income';
+    dari = '';
+    ke = accountName;
+    category = ai.category || (user.incomeSources[0]?.name || 'Income');
+  } else if (type === 'transfer') {
+    cashflow = 'Transfer';
+    dari = accountName;
+    ke = ai.toAccount || (user.accounts[1]?.name || 'Cash');
+    category = 'Transfer';
+  } else if (type === 'utang') {
+    cashflow = 'Utang Baru';
+    dari = '';
+    ke = '';
+    category = ai.account || ai.category || 'Paylater';
+  } else if (type === 'pelunasan_utang') {
+    cashflow = 'Pelunasan Utang';
+    dari = accountName;
+    ke = '';
+    category = ai.category || ai.toAccount || 'Paylater';
+  } else {
+    // expense / default
+    cashflow = 'Spending';
+    dari = accountName;
+    ke = '';
+    category = ai.category || (user.spendingCategories[0]?.name || 'Pengeluaran');
+  }
+
   const tx = {
     name:     ai.name || ai.note || ai.category || cashflow,
     amount:   ai.amount || 0,
-    cashflow: ai.cashflow || cashflow,
-    category: ai.category || (isIncome
-      ? (user.incomeSources[0]?.name || 'Income')
-      : (user.spendingCategories[0]?.name || 'Pengeluaran')),
-    dari:     ai.dari || dari,
-    ke:       ai.ke   || ke,
+    cashflow,
+    category,
+    dari,
+    ke,
   };
+
+  log.debug(`AI Transaction mapped:`, { type, cashflow: tx.cashflow, category: tx.category, amount: tx.amount, dari: tx.dari, ke: tx.ke, name: tx.name });
 
   try {
     await sheets.addTransaction(user.spreadsheetId, { ...tx, _userData: user });
@@ -870,15 +896,26 @@ async function saveAiTransaction(bot, callbackQuery) {
     } else if (tx.cashflow === 'Transfer') {
       userStore.updateAccountBalance(userId, tx.dari, -tx.amount);
       userStore.updateAccountBalance(userId, tx.ke, tx.amount);
+    } else if (tx.cashflow === 'Pelunasan Utang') {
+      userStore.updateAccountBalance(userId, tx.dari, -tx.amount);
     }
 
     session.clearSession(userId);
     // Kembali ke IDLE, bukan AI_CHAT — agar user bisa langsung kirim transaksi berikutnya
     session.setState(userId, STATES.IDLE);
 
-    const savedMsg = tx.cashflow === 'Income'
-      ? t.incomeSaved(tx.amount, tx.ke)
-      : t.expenseSaved(tx.amount, tx.dari);
+    let savedMsg;
+    if (tx.cashflow === 'Income') {
+      savedMsg = t.incomeSaved(tx.amount, tx.ke);
+    } else if (tx.cashflow === 'Transfer') {
+      savedMsg = t.transferSaved ? t.transferSaved(tx.amount, tx.dari, tx.ke) : t.expenseSaved(tx.amount, tx.dari);
+    } else if (tx.cashflow === 'Utang Baru') {
+      savedMsg = t.utangSaved(tx.category, tx.amount);
+    } else if (tx.cashflow === 'Pelunasan Utang') {
+      savedMsg = t.lunasUtangSaved(tx.category, tx.amount);
+    } else {
+      savedMsg = t.expenseSaved(tx.amount, tx.dari);
+    }
 
     await bot.editMessageText(savedMsg, {
       chat_id: chatId,
@@ -891,7 +928,7 @@ async function saveAiTransaction(bot, callbackQuery) {
       reply_markup: mainMenuKeyboard(user.lang),
     });
   } catch (err) {
-    console.error('AI tx save error:', err.message);
+    log.error('AI tx save error:', err.message);
     await bot.sendMessage(chatId, t.processingError, { parse_mode: 'Markdown' });
     session.clearSession(userId);
   }

@@ -381,10 +381,10 @@ Ketik /menu untuk kembali ke menu.
   aiTransactionDetected: (data) => `
 🤖 *AI mendeteksi transaksi:*
 
-${data.type === 'income' ? '💰' : '💸'} *${data.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}*
+${data.type === 'income' ? '💰' : data.type === 'transfer' ? '↔️' : data.type === 'utang' ? '💳' : data.type === 'pelunasan_utang' ? '✅' : '💸'} *${data.type === 'income' ? 'Pemasukan' : data.type === 'transfer' ? 'Transfer' : data.type === 'utang' ? 'Utang (Paylater)' : data.type === 'pelunasan_utang' ? 'Pelunasan Utang' : 'Pengeluaran'}*
 📌 ${data.type === 'income' ? 'Sumber' : 'Kategori'}: *${data.category}*
 💵 Nominal: *Rp ${formatNumber(data.amount)}*
-🏦 Akun: *${data.account}*
+🏦 ${data.type === 'transfer' ? `Dari: *${data.account}* → Ke: *${data.toAccount}*` : `Akun: *${data.account}*`}
 📝 Catatan: ${data.note || '-'}
 
 Apakah ini benar?`,

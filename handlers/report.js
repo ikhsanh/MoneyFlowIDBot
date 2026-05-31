@@ -5,9 +5,12 @@
 
 const userStore = require('../services/userStore');
 const sheets = require('../services/sheets');
-const gemini = require('../services/gemini');
+const { getServiceForUser } = require('../services/aiRouter');
+const { createLogger } = require('../services/logger');
 const session = require('../middleware/session');
 const { STATES } = require('../middleware/session');
+
+const log = createLogger('Report');
 const {
   reportKeyboard,
   billsActionKeyboard,
@@ -139,7 +142,7 @@ async function showMonthlyReport(bot, chatId, userId) {
     });
 
   } catch (err) {
-    console.error('Monthly report error:', err.message);
+    log.error('Monthly report error:', err.message);
     await bot.editMessageText(t.processingError, {
       chat_id: chatId,
       message_id: loadMsg.message_id,
@@ -209,7 +212,7 @@ async function showCategoryReport(bot, chatId, userId) {
     });
 
   } catch (err) {
-    console.error('Category report error:', err.message);
+    log.error('Category report error:', err.message);
     await bot.editMessageText(t.processingError, {
       chat_id: chatId,
       message_id: loadMsg.message_id,
@@ -306,7 +309,7 @@ async function handleBillPayToggle(bot, callbackQuery, billName, isPay) {
   }));
 
   // Sync ke sheets (non-blocking)
-  sheets.syncBillsToSheet(user.spreadsheetId, updatedUser.bills).catch(console.error);
+  sheets.syncBillsToSheet(user.spreadsheetId, updatedUser.bills).catch(log.error);
 
   await bot.editMessageReplyMarkup(
     billsActionKeyboard(billsWithStatus, user.lang),
@@ -328,7 +331,8 @@ async function showAiInsight(bot, chatId, userId) {
     const now = new Date();
     const transactions = await sheets.getTransactions(user.spreadsheetId, now.getMonth() + 1, now.getFullYear());
 
-    const insight = await gemini.generateInsight(
+    const ai = getServiceForUser(user);
+    const insight = await ai.generateInsight(
       transactions || [],
       user.accounts || [],
       user.bills || [],
@@ -343,7 +347,7 @@ async function showAiInsight(bot, chatId, userId) {
     });
 
   } catch (err) {
-    console.error('AI insight error:', err.message);
+    log.error('AI insight error:', err.message);
     await bot.editMessageText(t.aiError, {
       chat_id: chatId,
       message_id: loadMsg.message_id,
@@ -389,7 +393,8 @@ async function handleAiMessage(bot, msg) {
 
   try {
     // Coba parse sebagai transaksi dulu
-    const parsed = await gemini.parseTransaction(text, userCtx, user.lang);
+    const ai = getServiceForUser(user);
+    const parsed = await ai.parseTransaction(text, userCtx, user.lang);
 
     if (parsed && parsed.isTransaction && parsed.confidence >= 0.6) {
       // Deteksi transaksi — minta konfirmasi
@@ -408,14 +413,14 @@ async function handleAiMessage(bot, msg) {
     } else {
       // Fallback ke chat biasa
       const sessionData = session.getSession(userId);
-      const response = await gemini.chat(text, sessionData.aiHistory || [], userCtx, user.lang);
+      const response = await ai.chat(text, sessionData.aiHistory || [], userCtx, user.lang);
       session.addToAiHistory(userId, 'user', text);
       session.addToAiHistory(userId, 'model', response);
       await bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
     }
 
   } catch (err) {
-    console.error('AI chat error:', err.message);
+    log.error('AI chat error:', err.message);
     await bot.sendMessage(chatId, t.aiError, { parse_mode: 'Markdown' });
   }
 }
