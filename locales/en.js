@@ -380,10 +380,10 @@ Type /menu to return to the menu.
   aiTransactionDetected: (data) => `
 🤖 *AI detected a transaction:*
 
-${data.type === 'income' ? '💰' : '💸'} *${data.type === 'income' ? 'Income' : 'Expense'}*
+${data.type === 'income' ? '💰' : data.type === 'transfer' ? '↔️' : data.type === 'utang' ? '💳' : data.type === 'pelunasan_utang' ? '✅' : '💸'} *${data.type === 'income' ? 'Income' : data.type === 'transfer' ? 'Transfer' : data.type === 'utang' ? 'Debt (Paylater)' : data.type === 'pelunasan_utang' ? 'Debt Payment' : 'Expense'}*
 📌 ${data.type === 'income' ? 'Source' : 'Category'}: *${data.category}*
 💵 Amount: *Rp ${formatNumber(data.amount)}*
-🏦 Account: *${data.account}*
+🏦 ${data.type === 'transfer' ? `From: *${data.account}* → To: *${data.toAccount}*` : `Account: *${data.account}*`}
 📝 Note: ${data.note || '-'}
 
 Is this correct?`,

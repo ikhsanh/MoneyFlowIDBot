@@ -15,6 +15,7 @@ const cron = require('node-cron');
 // Services
 const userStore = require('./services/userStore');
 const sheets = require('./services/sheets');
+const { createLogger } = require('./services/logger');
 
 // Middleware
 const session = require('./middleware/session');
@@ -33,8 +34,10 @@ const L = require('./locales');
 // BOT INIT
 // =============================================
 
+const log = createLogger('Bot');
+
 if (!process.env.TELEGRAM_BOT_TOKEN) {
-  console.error('❌ TELEGRAM_BOT_TOKEN tidak ditemukan di .env');
+  log.error('TELEGRAM_BOT_TOKEN tidak ditemukan di .env');
   process.exit(1);
 }
 
@@ -46,18 +49,18 @@ const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
   },
 });
 
-console.log('🚀 MoneyFlowID Bot starting...');
+log.info('MoneyFlowID Bot starting...');
 
 // =============================================
 // COMMAND HANDLERS
 // =============================================
 
 bot.onText(/\/start/, async (msg) => {
-  console.log(`📨 [${new Date().toLocaleTimeString('id-ID')}] /start dari @${msg.from.username || msg.from.first_name} (${msg.from.id})`);
+  log.info(`/start dari @${msg.from.username || msg.from.first_name} (${msg.from.id})`);
   try {
     await startHandler.handleStart(bot, msg);
   } catch (err) {
-    console.error('/start error:', err.message);
+    log.error('/start error:', err.message);
   }
 });
 
@@ -65,7 +68,7 @@ bot.onText(/\/menu/, async (msg) => {
   try {
     await startHandler.handleMenu(bot, msg);
   } catch (err) {
-    console.error('/menu error:', err.message);
+    log.error('/menu error:', err.message);
   }
 });
 
@@ -73,7 +76,7 @@ bot.onText(/\/help/, async (msg) => {
   try {
     await startHandler.handleHelp(bot, msg);
   } catch (err) {
-    console.error('/help error:', err.message);
+    log.error('/help error:', err.message);
   }
 });
 
@@ -82,7 +85,7 @@ bot.onText(/\/income/, async (msg) => {
     if (!checkSetup(bot, msg)) return;
     await txHandler.startIncome(bot, msg.chat.id, msg.from.id);
   } catch (err) {
-    console.error('/income error:', err.message);
+    log.error('/income error:', err.message);
   }
 });
 
@@ -91,7 +94,7 @@ bot.onText(/\/expense/, async (msg) => {
     if (!checkSetup(bot, msg)) return;
     await txHandler.startExpense(bot, msg.chat.id, msg.from.id);
   } catch (err) {
-    console.error('/expense error:', err.message);
+    log.error('/expense error:', err.message);
   }
 });
 
@@ -100,7 +103,7 @@ bot.onText(/\/balance/, async (msg) => {
     if (!checkSetup(bot, msg)) return;
     await reportHandler.showBalance(bot, msg.chat.id, msg.from.id);
   } catch (err) {
-    console.error('/balance error:', err.message);
+    log.error('/balance error:', err.message);
   }
 });
 
@@ -109,7 +112,7 @@ bot.onText(/\/report/, async (msg) => {
     if (!checkSetup(bot, msg)) return;
     await reportHandler.showReportMenu(bot, msg.chat.id, msg.from.id);
   } catch (err) {
-    console.error('/report error:', err.message);
+    log.error('/report error:', err.message);
   }
 });
 
@@ -118,7 +121,7 @@ bot.onText(/\/bills/, async (msg) => {
     if (!checkSetup(bot, msg)) return;
     await reportHandler.showBillsStatus(bot, msg.chat.id, msg.from.id);
   } catch (err) {
-    console.error('/bills error:', err.message);
+    log.error('/bills error:', err.message);
   }
 });
 
@@ -127,7 +130,7 @@ bot.onText(/\/ai/, async (msg) => {
     if (!checkSetup(bot, msg)) return;
     await reportHandler.startAiChat(bot, msg.chat.id, msg.from.id);
   } catch (err) {
-    console.error('/ai error:', err.message);
+    log.error('/ai error:', err.message);
   }
 });
 
@@ -141,17 +144,17 @@ bot.onText(/\/settings/, async (msg) => {
       reply_markup: settingsKeyboard(user.lang),
     });
   } catch (err) {
-    console.error('/settings error:', err.message);
+    log.error('/settings error:', err.message);
   }
 });
 
 bot.onText(/\/budget/, async (msg) => {
-  console.log(`📨 [${new Date().toLocaleTimeString('id-ID')}] /budget dari @${msg.from.username || msg.from.first_name} (${msg.from.id})`);
+  log.info(`📨 [${new Date().toLocaleTimeString('id-ID')}] /budget dari @${msg.from.username || msg.from.first_name} (${msg.from.id})`);
   try {
     if (!checkSetup(bot, msg)) return;
     await budgetHandler.showBudgetMenu(bot, msg.chat.id, msg.from.id);
   } catch (err) {
-    console.error('/budget error:', err.message);
+    log.error('/budget error:', err.message);
   }
 });
 
@@ -167,7 +170,7 @@ bot.on('message', async (msg) => {
   const state = session.getState(userId);
 
   // Log semua pesan masuk untuk monitoring
-  console.log(`📨 [${new Date().toLocaleTimeString('id-ID')}] Pesan dari @${msg.from.username || msg.from.first_name} (${userId}): "${msg.text.substring(0, 60)}" [state: ${state}]`);
+  log.info(`📨 [${new Date().toLocaleTimeString('id-ID')}] Pesan dari @${msg.from.username || msg.from.first_name} (${userId}): "${msg.text.substring(0, 60)}" [state: ${state}]`);
 
   try {
     switch (state) {
@@ -339,7 +342,7 @@ bot.on('message', async (msg) => {
 
     }
   } catch (err) {
-    console.error(`Message handler error (state: ${state}):`, err.message);
+    log.error(`Message handler error (state: ${state}):`, err.message);
     const user = userStore.getUser(userId);
     const t = L(user ? user.lang : 'id');
     try {
@@ -819,6 +822,31 @@ bot.on('callback_query', async (callbackQuery) => {
             parse_mode: 'Markdown',
           });
           break;
+
+        case 'ai': {
+          const selectedService = data.split(':')[2];
+          if (selectedService) {
+            // User memilih service
+            user.aiService = selectedService;
+            userStore.saveUser(userId, user);
+            const label = { gemini: '🟣 Gemini', chatgpt: '🟢 ChatGPT', groq: '🟠 Groq' };
+            await bot.sendMessage(chatId, lang === 'id'
+              ? `✅ AI service diubah ke *${label[selectedService] || selectedService}*`
+              : `✅ AI service changed to *${label[selectedService] || selectedService}*`, {
+              parse_mode: 'Markdown',
+              reply_markup: require('./handlers/menu').aiServiceKeyboard(selectedService, lang),
+            });
+          } else {
+            // Tampilkan pilihan
+            await bot.sendMessage(chatId, lang === 'id'
+              ? '🤖 *Pilih AI Service*\n\nPilih layanan AI yang ingin digunakan:'
+              : '🤖 *Choose AI Service*\n\nSelect the AI service to use:', {
+              parse_mode: 'Markdown',
+              reply_markup: require('./handlers/menu').aiServiceKeyboard(user.aiService || 'gemini', lang),
+            });
+          }
+          break;
+        }
       }
       return;
     }
@@ -894,7 +922,7 @@ bot.on('callback_query', async (callbackQuery) => {
       return;
     }
 
-    console.error(`Callback handler error (${data}):`, errMsg);
+    log.error(`Callback handler error (${data}):`, errMsg);
     try {
       await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ Error, coba lagi' });
     } catch {}
@@ -909,19 +937,19 @@ bot.on('polling_error', (err) => {
   const msg = err.message || '';
   // ECONNRESET / ETIMEDOUT = gangguan jaringan sementara, bot akan reconnect otomatis
   if (msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('EFATAL')) {
-    console.warn('⚠️  Network blip (polling), reconnecting...', msg.split(':')[0]);
+    log.warn('⚠️  Network blip (polling), reconnecting...', msg.split(':')[0]);
     return;
   }
-  console.error('Polling error:', msg);
+  log.error('Polling error:', msg);
 });
 
 bot.on('error', (err) => {
   const msg = err.message || '';
   if (msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT')) {
-    console.warn('⚠️  Bot network error (transient):', msg.split(':')[0]);
+    log.warn('⚠️  Bot network error (transient):', msg.split(':')[0]);
     return;
   }
-  console.error('Bot error:', msg);
+  log.error('Bot error:', msg);
 });
 
 // =============================================
@@ -930,7 +958,7 @@ bot.on('error', (err) => {
 // =============================================
 
 cron.schedule('0 9 * * *', async () => {
-  console.log('⏰ [Cron] Bill reminder check...');
+  log.info('⏰ [Cron] Bill reminder check...');
   const userIds = userStore.getAllUserIds();
 
   for (const userId of userIds) {
@@ -970,7 +998,7 @@ cron.schedule('0 9 * * *', async () => {
         }
       }
     } catch (err) {
-      console.error(`Bill reminder error for user ${userId}:`, err.message);
+      log.error(`Bill reminder error for user ${userId}:`, err.message);
     }
   }
 }, {
@@ -983,7 +1011,7 @@ cron.schedule('0 9 * * *', async () => {
 // =============================================
 
 cron.schedule('5 9 * * *', async () => {
-  console.log('☀️ [Cron] Daily morning reminder...');
+  log.info('☀️ [Cron] Daily morning reminder...');
   const userIds = userStore.getAllUserIds();
   const { mainMenuKeyboard: mkb } = require('./handlers/menu');
 
@@ -1011,7 +1039,7 @@ cron.schedule('5 9 * * *', async () => {
         },
       });
     } catch (err) {
-      console.error(`Daily reminder error for user ${userId}:`, err.message);
+      log.error(`Daily reminder error for user ${userId}:`, err.message);
     }
   }
 }, {
@@ -1024,7 +1052,7 @@ cron.schedule('5 9 * * *', async () => {
 // =============================================
 
 cron.schedule('0 22 * * *', async () => {
-  console.log('🌙 [Cron] Daily summary...');
+  log.info('🌙 [Cron] Daily summary...');
   const userIds = userStore.getAllUserIds();
   const sheets = require('./services/sheets');
 
@@ -1124,7 +1152,7 @@ cron.schedule('0 22 * * *', async () => {
       });
 
     } catch (err) {
-      console.error(`Daily summary error for user ${userId}:`, err.message);
+      log.error(`Daily summary error for user ${userId}:`, err.message);
     }
   }
 }, {
@@ -1137,7 +1165,7 @@ cron.schedule('0 22 * * *', async () => {
 // =============================================
 
 cron.schedule('1 0 1 * *', async () => {
-  console.log('📅 [Cron] New month — resetting bills & creating new sheet...');
+  log.info('📅 [Cron] New month — resetting bills & creating new sheet...');
   const userIds = userStore.getAllUserIds();
   const sheets = require('./services/sheets');
 
@@ -1167,10 +1195,10 @@ cron.schedule('1 0 1 * *', async () => {
             }]],
           },
         });
-        console.log(`  ✅ New sheet created for user ${userId}: ${sheetName}`);
+        log.info(`  ✅ New sheet created for user ${userId}: ${sheetName}`);
       }
     } catch (err) {
-      console.error(`Monthly reset error for user ${userId}:`, err.message);
+      log.error(`Monthly reset error for user ${userId}:`, err.message);
     }
   }
 }, {
@@ -1200,18 +1228,18 @@ function checkSetup(bot, msg) {
 // =============================================
 
 bot.getMe().then((me) => {
-  console.log(`✅ Bot @${me.username} berjalan!`);
-  console.log(`📊 Google Credentials: ${process.env.GOOGLE_CREDENTIALS_PATH}`);
-  console.log(`🤖 Gemini AI: ${process.env.GEMINI_API_KEY ? 'Configured' : '⚠️ NOT SET'}`);
-  console.log(`⏰ Timezone: ${process.env.TIMEZONE || 'Asia/Jakarta'}`);
-  console.log('─'.repeat(50));
-  console.log('MoneyFlowID Bot siap menerima pesan!');
-  console.log('─'.repeat(50));
-  console.log('👨‍💻 Dibuat oleh  : Ikhsanh');
-  console.log('📱 Telegram      : @ikhsanh');
-  console.log('🐙 GitHub        : https://github.com/ikhsanh');
-  console.log('─'.repeat(50));
+  log.info(`✅ Bot @${me.username} berjalan!`);
+  log.info(`📊 Google Credentials: ${process.env.GOOGLE_CREDENTIALS_PATH}`);
+  log.info(`🤖 Gemini AI: ${process.env.GEMINI_API_KEY ? 'Configured' : '⚠️ NOT SET'}`);
+  log.info(`⏰ Timezone: ${process.env.TIMEZONE || 'Asia/Jakarta'}`);
+  log.info('─'.repeat(50));
+  log.info('MoneyFlowID Bot siap menerima pesan!');
+  log.info('─'.repeat(50));
+  log.info('👨‍💻 Dibuat oleh  : Ikhsanh');
+  log.info('📱 Telegram      : @ikhsanh');
+  log.info('🐙 GitHub        : https://github.com/ikhsanh');
+  log.info('─'.repeat(50));
 }).catch((err) => {
-  console.error('❌ Gagal terhubung ke Telegram:', err.message);
+  log.error('❌ Gagal terhubung ke Telegram:', err.message);
   process.exit(1);
 });

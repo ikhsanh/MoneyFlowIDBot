@@ -240,6 +240,7 @@ function settingsKeyboard(lang = 'id') {
   return {
     inline_keyboard: [
       [{ text: isId ? '🌐 Ubah Bahasa' : '🌐 Change Language', callback_data: 'settings:language' }],
+      [{ text: isId ? '🤖 Pilih AI Service' : '🤖 Choose AI Service', callback_data: 'settings:ai' }],
       [{ text: isId ? '💼 Kelola Sumber Income' : '💼 Manage Income Sources', callback_data: 'settings:income' }],
       [{ text: isId ? '💳 Kelola Akun' : '💳 Manage Accounts', callback_data: 'settings:accounts' }],
       [{ text: isId ? '🛍️ Kelola Kategori' : '🛍️ Manage Categories', callback_data: 'settings:spending' }],
@@ -342,6 +343,24 @@ function textInputKeyboard(lang = 'id') {
   };
 }
 
+/**
+ * Keyboard pilih AI service
+ */
+function aiServiceKeyboard(currentService = 'gemini', lang = 'id') {
+  const isId = lang === 'id';
+  const options = [
+    { key: 'gemini', label: '🟣 Gemini (Google)' },
+    { key: 'chatgpt', label: '🟢 ChatGPT (OpenAI)' },
+    { key: 'groq', label: '🟠 Groq (Llama)' },
+  ];
+  const buttons = options.map(o => [{
+    text: `${o.key === currentService ? '✅ ' : ''}${o.label}`,
+    callback_data: `settings:ai:${o.key}`,
+  }]);
+  buttons.push([{ text: isId ? '◀️ Kembali' : '◀️ Back', callback_data: 'menu:settings' }]);
+  return { inline_keyboard: buttons };
+}
+
 module.exports = {
   languageKeyboard,
   mainMenuKeyboard,
@@ -360,6 +379,7 @@ module.exports = {
   settingsKeyboard,
   billsActionKeyboard,
   aiConfirmKeyboard,
+  aiServiceKeyboard,
   backToMenuKeyboard,
   textInputKeyboard,
 };

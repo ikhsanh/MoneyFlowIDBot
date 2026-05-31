@@ -8,6 +8,9 @@
 
 require('dotenv').config();
 const { google } = require('googleapis');
+const { createLogger } = require('./logger');
+
+const log = createLogger('Sheets');
 const path = require('path');
 
 // =============================================
@@ -644,7 +647,7 @@ async function formatMonthlySheet(spreadsheetId, sheetId) {
   try {
     await sheets.spreadsheets.batchUpdate({ spreadsheetId, resource: { requests } });
   } catch (err) {
-    console.error('Format error (non-critical):', err.message);
+    log.warn('Format error (non-critical):', err.message);
   }
 }
 
@@ -767,7 +770,11 @@ async function addNameToSection(spreadsheetId, sheetName, name, startRow, maxRow
     spreadsheetId,
     `'${sheetName}'!${col}${startRow}:${col}${startRow + maxRows - 1}`
   );
-  const existing = (data || []).flat().map((v) => (v || '').toLowerCase());
+  // Normalize: pastikan array punya panjang maxRows (API tidak return cell kosong)
+  const existing = [];
+  for (let i = 0; i < maxRows; i++) {
+    existing.push(((data[i] && data[i][0]) || '').toLowerCase());
+  }
   if (existing.includes(name.toLowerCase())) return; // sudah ada
 
   // Cari baris kosong

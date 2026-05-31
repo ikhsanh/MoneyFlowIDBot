@@ -5,7 +5,10 @@
 
 const userStore = require('../services/userStore');
 const sheets = require('../services/sheets');
+const { createLogger } = require('../services/logger');
 const session = require('../middleware/session');
+
+const log = createLogger('Start');
 const { STATES } = require('../middleware/session');
 const { mainMenuKeyboard, languageKeyboard } = require('./menu');
 const L = require('../locales');
@@ -119,7 +122,7 @@ async function handleSpreadsheetId(bot, msg) {
     await startSetupIncome(bot, chatId, userId, user.lang);
 
   } catch (err) {
-    console.error('Spreadsheet validation error:', err.message);
+    log.error('Spreadsheet validation error:', err.message);
     await bot.editMessageText(
       `❌ *Error:* ${err.message}\n\nCoba lagi dengan ID yang benar:`,
       { chat_id: chatId, message_id: loadMsg.message_id, parse_mode: 'Markdown' }

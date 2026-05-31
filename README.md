@@ -8,10 +8,12 @@
 [![Telegram Bot](https://img.shields.io/badge/Telegram-Bot%20API-blue?logo=telegram)](https://core.telegram.org/bots/api)
 [![Google Sheets](https://img.shields.io/badge/Google-Sheets%20API-4285F4?logo=google)](https://developers.google.com/sheets)
 [![Gemini AI](https://img.shields.io/badge/Powered%20by-Gemini%20AI-9c27b0)](https://aistudio.google.com)
+[![ChatGPT](https://img.shields.io/badge/Supports-ChatGPT-74aa9c)](https://platform.openai.com)
+[![Groq](https://img.shields.io/badge/Supports-Groq-f55036)](https://console.groq.com)
 
 > **Bot Telegram untuk manajemen keuangan pribadi yang cerdas, dengan AI & Google Sheets**
 
-Bot all-in-one untuk tracking income, expenses, dan memberikan insights keuangan secara real-time. Terintegrasi dengan **Gemini AI** untuk parsing transaksi natural language dan **Google Sheets** untuk visualisasi data yang rapi.
+Bot all-in-one untuk tracking income, expenses, dan memberikan insights keuangan secara real-time. Terintegrasi dengan **Multi-AI** (Gemini, ChatGPT, Groq) untuk parsing transaksi natural language dan **Google Sheets** untuk visualisasi data yang rapi.
 
 ---
 
@@ -28,8 +30,10 @@ Bot all-in-one untuk tracking income, expenses, dan memberikan insights keuangan
 
 ### 🤖 **AI-Powered Features**
 - **Natural Language Transaction Parser** — Cukup chat "Bayar makan di warteg 15rb" → bot otomatis parsing dan catat!
-- **AI Financial Insight** — Gemini AI memberikan analisis & rekomendasi berdasarkan pola spending Anda
+- **Multi-AI Support** — Pilih antara Gemini, ChatGPT, atau Groq dengan auto-fallback model
+- **AI Financial Insight** — AI memberikan analisis & rekomendasi berdasarkan pola spending Anda
 - **Smart Category Matching** — AI membantu menebak kategori transaksi secara otomatis
+- **Smart Phrasing** — Mengerti singkatan: "tf" (transfer), "tarik tunai", "spaylater" (utang), "bayar spaylater" (pelunasan utang)
 
 ### 📊 **Laporan & Analytics**
 - 📈 **Monthly Report** — Ringkasan income, expenses, net, savings rate, utang, piutang
@@ -112,7 +116,7 @@ User bisa langsung chat transaksi dengan bahasa natural:
 - **📋 Lainnya** — Bills, Piutang, Utang
 - **📊 Laporan** — Berbagai laporan keuangan
 - **💳 Saldo** — Cek saldo semua akun
-- **🤖 AI Chat** — Chat dengan Gemini AI
+- **🤖 AI Chat** — Chat dengan AI (Gemini/ChatGPT/Groq)
 - **⚙️ Pengaturan** — Ubah setting
 
 ### AI Chat
@@ -133,6 +137,7 @@ MoneyFlowIDBot/
 │   └── defaults.js          # Daftar default (akun, kategori, dll)
 ├── handlers/
 │   ├── menu.js              # Semua keyboard builder
+│   ├── phrasing.js          # Shared AI prompts & phrasing rules
 │   ├── start.js             # Onboarding & /start
 │   ├── setup.js             # Flow setup keuangan
 │   ├── transaction.js       # Catat transaksi
@@ -144,9 +149,14 @@ MoneyFlowIDBot/
 ├── middleware/
 │   └── session.js           # State management
 ├── services/
+│   ├── aiRouter.js          # AI service router (pilih Gemini/ChatGPT/Groq)
+│   ├── gemini.js            # Gemini AI integration
+│   ├── chatgpt.js           # ChatGPT (OpenAI) integration
+│   ├── groq.js              # Groq (Llama) integration
+│   ├── logger.js            # Logger utility (file + console)
 │   ├── sheets.js            # Google Sheets API + monthly template
-│   ├── userStore.js         # User data management (JSON)
-│   └── gemini.js            # Gemini AI integration
+│   └── userStore.js         # User data management (JSON)
+├── logs/                    # Log harian (auto-generated, tidak di-commit)
 ├── credentials/
 │   └── google-credentials.json  # Service account key (JANGAN di-commit!)
 └── data/
@@ -177,7 +187,7 @@ MoneyFlowIDBot/
 | Komponen | Teknologi |
 |----------|-----------|
 | **Bot Framework** | node-telegram-bot-api |
-| **AI / NLP** | Google Gemini 3.5 Flash |
+| **AI / NLP** | Gemini, ChatGPT (OpenAI), Groq (Llama) — auto-fallback |
 | **Database** | Google Sheets (via googleapis) |
 | **Runtime** | Node.js 18+ |
 | **Local Storage** | JSON files |
@@ -233,9 +243,9 @@ MoneyFlowIDBot/
 - ✅ Buka spreadsheet manual untuk memverifikasi akses
 
 ### Error: "Invalid API key"
-- ✅ Cek GEMINI_API_KEY di `.env`
-- ✅ Pastikan API key masih aktif di [Google AI Studio](https://aistudio.google.com)
-- ✅ Cek quota Gemini API di [Google Cloud Console](https://console.cloud.google.com)
+- ✅ Cek GEMINI_API_KEY / OPENAI_API_KEY / GROQ_API_KEY di `.env`
+- ✅ Pastikan API key masih aktif
+- ✅ Cek quota API di dashboard masing-masing provider
 
 ### Transaksi tidak tercatat
 - ✅ Cek apakah setup sudah complete (`/settings` → Setup Check)
@@ -278,6 +288,8 @@ Pastikan kamu memiliki:
 - Akun **Telegram**
 - Akun **Google** (untuk Google Sheets API)
 - **Gemini API Key** — gratis di [Google AI Studio](https://aistudio.google.com)
+- **ChatGPT API Key** *(opsional)* — dari [OpenAI Platform](https://platform.openai.com/api-keys)
+- **Groq API Key** *(opsional)* — gratis di [Groq Console](https://console.groq.com/keys)
 - Akses terminal / command prompt ke server
 
 ---
@@ -397,14 +409,23 @@ Edit file `.env` dengan text editor (nano, vim, Notepad, dll):
 # Telegram
 TELEGRAM_BOT_TOKEN=your_bot_token_here
 
-# Google AI (Gemini)
+# Google AI (Gemini) — wajib
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# ChatGPT / OpenAI (opsional)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Groq (opsional)
+GROQ_API_KEY=your_groq_api_key_here
 
 # Google Credentials
 GOOGLE_CREDENTIALS_PATH=./credentials/google-credentials.json
 
 # Timezone (untuk cron jobs)
 TIMEZONE=Asia/Jakarta
+
+# Log Level (debug / info / warn / error)
+LOG_LEVEL=info
 ```
 
 ---

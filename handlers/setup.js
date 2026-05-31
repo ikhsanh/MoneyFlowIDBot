@@ -5,7 +5,10 @@
 
 const userStore = require('../services/userStore');
 const sheets = require('../services/sheets');
+const { createLogger } = require('../services/logger');
 const session = require('../middleware/session');
+
+const log = createLogger('Setup');
 const { STATES } = require('../middleware/session');
 const DEFAULTS = require('../config/defaults');
 const {
@@ -582,7 +585,7 @@ async function completeSetup(bot, chatId, userId, user) {
     });
 
   } catch (err) {
-    console.error('Setup complete error:', err.message);
+    log.error('Setup complete error:', err.message);
     await bot.editMessageText(
       `❌ Terjadi error saat membuat sheet:\n\`${err.message}\`\n\nSetup tetap tersimpan. Ketik /menu untuk lanjut.`,
       { chat_id: chatId, message_id: loadMsg.message_id, parse_mode: 'Markdown' }
