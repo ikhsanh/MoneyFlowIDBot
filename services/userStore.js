@@ -301,6 +301,14 @@ function getUserLang(userId) {
   return user ? user.lang || 'id' : 'id';
 }
 
+/**
+ * Hapus data user (reset)
+ */
+function deleteUser(userId) {
+  const filePath = path.join(DATA_DIR, `${userId}.json`);
+  try { fs.unlinkSync(filePath); } catch {}
+}
+
 module.exports = {
   getUser,
   saveUser,
@@ -323,4 +331,5 @@ module.exports = {
   resetBillsForNewMonth,
   getAllUserIds,
   getUserLang,
+  deleteUser,
 };

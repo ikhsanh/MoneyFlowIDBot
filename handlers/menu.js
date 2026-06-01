@@ -247,6 +247,7 @@ function settingsKeyboard(lang = 'id') {
       [{ text: isId ? '🛍️ Kelola Kategori' : '🛍️ Manage Categories', callback_data: 'settings:spending' }],
       [{ text: isId ? '📅 Kelola Tagihan' : '📅 Manage Bills', callback_data: 'settings:bills' }],
       [{ text: isId ? '📊 Ganti Spreadsheet' : '📊 Change Spreadsheet', callback_data: 'settings:spreadsheet' }],
+      [{ text: isId ? '🗑️ Reset Data Saya' : '🗑️ Reset My Data', callback_data: 'settings:reset' }],
       [{ text: isId ? '◀️ Kembali' : '◀️ Back', callback_data: 'menu:main' }],
     ],
   };

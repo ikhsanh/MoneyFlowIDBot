@@ -951,6 +951,55 @@ bot.on('callback_query', async (callbackQuery) => {
           }
           break;
         }
+
+        case 'reset': {
+          const confirm = data.split(':')[2];
+          if (confirm === 'confirm') {
+            // Reset spreadsheet — hapus semua sheet kecuali yang pertama, lalu clear isinya
+            if (user.spreadsheetId) {
+              try {
+                const meta = await sheets.getSheetsMeta(user.spreadsheetId);
+                const sheetNames = Object.keys(meta);
+                const sheetsClient = (await sheets.readRange(user.spreadsheetId, "'Sheet1'!A1:A1"), null); // warm up auth
+                const { google } = require('googleapis');
+                const credPath = require('path').resolve(process.env.GOOGLE_CREDENTIALS_PATH || './credentials/google-credentials.json');
+                const auth = new google.auth.GoogleAuth({ credentials: require(credPath), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+                const sheetsApi = google.sheets({ version: 'v4', auth });
+
+                // Hapus semua sheet kecuali satu (tidak bisa hapus semua)
+                const sheetIds = Object.values(meta);
+                if (sheetIds.length > 1) {
+                  const requests = sheetIds.slice(1).map(id => ({ deleteSheet: { sheetId: id } }));
+                  await sheetsApi.spreadsheets.batchUpdate({ spreadsheetId: user.spreadsheetId, resource: { requests } });
+                }
+                // Clear sheet pertama
+                const firstName = sheetNames[0] || 'Sheet1';
+                await sheetsApi.spreadsheets.values.clear({ spreadsheetId: user.spreadsheetId, range: `'${firstName}'!A1:Z10000` });
+              } catch (e) { log.warn('Reset spreadsheet error (non-critical):', e.message); }
+            }
+
+            // Reset user data
+            userStore.deleteUser(userId);
+            session.clearSession(userId);
+
+            await bot.sendMessage(chatId, lang === 'id'
+              ? '✅ *Data berhasil direset!*\n\nSilakan ketik /start untuk setup ulang dari awal.'
+              : '✅ *Data reset successful!*\n\nPlease type /start to set up again.', {
+              parse_mode: 'Markdown',
+            });
+          } else {
+            await bot.sendMessage(chatId, lang === 'id'
+              ? '⚠️ *Reset Data*\n\nIni akan menghapus SEMUA data kamu (transaksi, akun, kategori, tagihan) dan membuat spreadsheet dari awal.\n\n*Apakah kamu yakin?*'
+              : '⚠️ *Reset Data*\n\nThis will delete ALL your data (transactions, accounts, categories, bills) and start fresh.\n\n*Are you sure?*', {
+              parse_mode: 'Markdown',
+              reply_markup: { inline_keyboard: [
+                [{ text: lang === 'id' ? '✅ Ya, Reset' : '✅ Yes, Reset', callback_data: 'settings:reset:confirm' }],
+                [{ text: lang === 'id' ? '❌ Batal' : '❌ Cancel', callback_data: 'menu:settings' }],
+              ]},
+            });
+          }
+          break;
+        }
       }
       return;
     }
