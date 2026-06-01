@@ -52,8 +52,46 @@ const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
 log.info('MoneyFlowID Bot starting...');
 
 // =============================================
+// THREAD-AWARE MESSAGING
+// Agar bot reply di thread yang benar (grup dengan topics/threads)
+// =============================================
+const _originalSendMessage = bot.sendMessage.bind(bot);
+const _threadContext = new Map(); // chatId -> { message_thread_id, message_id }
+
+/**
+ * Set thread context dari incoming message
+ */
+function setThreadContext(msg) {
+  if (msg && msg.chat) {
+    _threadContext.set(msg.chat.id, {
+      message_thread_id: msg.message_thread_id || undefined,
+      message_id: msg.message_id,
+    });
+  }
+}
+
+/**
+ * Override sendMessage agar otomatis reply di thread yang benar
+ */
+bot.sendMessage = function(chatId, text, options = {}) {
+  const ctx = _threadContext.get(chatId);
+  if (ctx) {
+    if (ctx.message_thread_id && !options.message_thread_id) {
+      options.message_thread_id = ctx.message_thread_id;
+    }
+    if (ctx.message_id && !options.reply_to_message_id) {
+      options.reply_to_message_id = ctx.message_id;
+    }
+  }
+  return _originalSendMessage(chatId, text, options);
+};
+
+// =============================================
 // COMMAND HANDLERS
 // =============================================
+
+// Set thread context untuk SEMUA pesan masuk (termasuk commands)
+bot.on('message', (msg) => { setThreadContext(msg); });
 
 bot.onText(/\/start/, async (msg) => {
   log.info(`/start dari @${msg.from.username || msg.from.first_name} (${msg.from.id})`);
@@ -420,6 +458,7 @@ bot.on('message', async (msg) => {
 // =============================================
 
 bot.on('callback_query', async (callbackQuery) => {
+  setThreadContext(callbackQuery.message);
   const userId = callbackQuery.from.id;
   const chatId = callbackQuery.message.chat.id;
   const data = callbackQuery.data;
