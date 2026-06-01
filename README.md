@@ -11,6 +11,10 @@
 [![ChatGPT](https://img.shields.io/badge/Supports-ChatGPT-74aa9c)](https://platform.openai.com)
 [![Groq](https://img.shields.io/badge/Supports-Groq-f55036)](https://console.groq.com)
 
+> 🌐 **Read this in another language**: **[English Version (README_EN.md)](README_EN.md)**
+
+---
+
 > **Bot Telegram untuk manajemen keuangan pribadi yang cerdas, dengan AI & Google Sheets**
 
 Bot all-in-one untuk tracking income, expenses, dan memberikan insights keuangan secara real-time. Terintegrasi dengan **Multi-AI** (Gemini, ChatGPT, Groq) untuk parsing transaksi natural language dan **Google Sheets** untuk visualisasi data yang rapi.
