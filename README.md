@@ -39,6 +39,7 @@ Bot all-in-one untuk tracking income, expenses, dan memberikan insights keuangan
 - 📈 **Monthly Report** — Ringkasan income, expenses, net, savings rate, utang, piutang
 - 📋 **Category Breakdown** — Lihat pengeluaran per kategori dalam sebulan
 - 💳 **Account Balance** — Check saldo real-time semua akun/dompet
+- 📊 **Monthly Financial Summary** — Sheet summary dengan pie chart & bar chart
 - 📉 **Spending Trends** — Grafik visualisasi di spreadsheet
 - 💰 **Financial Health Check** — Status keuangan bulan ini dari AI
 
@@ -51,6 +52,10 @@ Bot all-in-one untuk tracking income, expenses, dan memberikan insights keuangan
 ### ⚙️ **Manajemen Akun & Pengaturan**
 - 🏦 **Multiple Accounts** — Support berbagai bank, e-wallet, & cash (BCA, BRI, Gopay, OVO, ShopeePay, etc)
 - 🎯 **Budget Setting** — Atur budget per kategori & track pengeluaran vs budget
+- 🌐 **Bilingual Support** — Bahasa Indonesia & English, bisa ganti kapan saja
+- 👥 **Multi-user** — Setiap pengguna punya data, akun, & budget terpisah
+- 🔄 **Flexible Setup** — Customize income sources, spending categories, akun, & bills sesuai kebutuhan
+- 🗑️ **Reset Data** — Reset spreadsheet & data user untuk mulai dari awal
 - 🌐 **Bilingual Support** — Bahasa Indonesia & English, bisa ganti kapan saja
 - 👥 **Multi-user** — Setiap pengguna punya data, akun, & budget terpisah
 - 🔄 **Flexible Setup** — Customize income sources, spending categories, akun, & bills sesuai kebutuhan
