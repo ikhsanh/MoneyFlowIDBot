@@ -61,6 +61,14 @@ An all-in-one bot to track income, expenses, and provide real-time financial ins
 - 🔄 **Flexible Setup** — Customize income sources, spending categories, accounts, and bills to suit your needs
 - 🗑️ **Data Reset** — Easily wipe your spreadsheet and user data to start fresh
 
+### 👑 **Admin Features**
+- 📢 **Broadcast Messages** — Send announcements or updates to all registered users at once (via Settings menu or `/broadcast`)
+- 🔧 **Broadcast Templates** — Ready-to-use templates: Maintenance, Feature Update, Warning, Announcement
+- ✍️ **Custom Messages** — Write free-form broadcast messages with full Markdown formatting support
+- 👑 **Admin Panel** — Admin dashboard: user statistics, broadcast controls, bot info
+- 📊 **User Statistics** — View total users, active users, and language breakdown
+- 🔒 **Protected Access** — Admin menu only appears when `BOT_ADMIN_ID` is set and matches the requesting user
+
 ---
 
 ## 📋 Monthly Sheet Structure
@@ -103,6 +111,18 @@ A complete log table of all transactions featuring the following columns:
 📈 Budget Setup  →  Set category budgets & view progress
 🤖 AI Chat       →  Chat in natural language to record transactions
 ⚙️ Settings      →  Customize accounts, categories, income sources, language
+```
+
+### **Admin Settings Menu (only visible to the admin)**
+```
+📢 Broadcast     →  Open the broadcast panel directly
+👑 Admin Panel   →  Admin dashboard (stats, broadcast, bot info)
+```
+
+### **Admin Commands**
+```
+/broadcast           →  Open the broadcast menu
+/broadcast <message> →  Send a broadcast message directly (shortcut)
 ```
 
 ### **Usage Examples (AI Chat Feature)**
@@ -149,7 +169,8 @@ MoneyFlowIDBot/
 │   ├── start.js             # Onboarding flow & /start command
 │   ├── setup.js             # Financial initialization wizard
 │   ├── transaction.js       # Manual transaction recording flows
-│   └── report.js            # Reports, analytics & AI insights handler
+│   ├── report.js            # Reports, analytics & AI insights handler
+│   └── broadcast.js         # Admin broadcast & admin panel handler
 ├── locales/
 │   ├── id.js                # Indonesian translations
 │   ├── en.js                # English translations
@@ -427,12 +448,18 @@ GROQ_API_KEY=your_groq_api_key_here
 # Google Credentials Path
 GOOGLE_CREDENTIALS_PATH=./credentials/google-credentials.json
 
+# Bot Admin ID (optional — enables Broadcast & Admin Panel features)
+# Find your Telegram User ID by messaging @userinfobot on Telegram
+BOT_ADMIN_ID=your_telegram_user_id_here
+
 # Timezone (for automated daily/monthly scheduler)
 TIMEZONE=Asia/Jakarta
 
 # Log Level (debug / info / warn / error)
 LOG_LEVEL=info
 ```
+
+> 💡 **Admin Note**: Set `BOT_ADMIN_ID` to your numeric Telegram User ID (not your username). Once configured, the **📢 Broadcast** and **👑 Admin Panel** buttons will automatically appear inside the Settings menu.
 
 ---
 

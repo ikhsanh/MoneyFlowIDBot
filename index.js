@@ -27,6 +27,7 @@ const setupHandler = require('./handlers/setup');
 const txHandler = require('./handlers/transaction');
 const reportHandler = require('./handlers/report');
 const budgetHandler = require('./handlers/budget');
+const broadcastHandler = require('./handlers/broadcast');
 const { mainMenuKeyboard, settingsKeyboard, languageKeyboard, otherTransactionKeyboard } = require('./handlers/menu');
 const L = require('./locales');
 
@@ -57,6 +58,9 @@ log.info('MoneyFlowID Bot starting...');
 // =============================================
 const _originalSendMessage = bot.sendMessage.bind(bot);
 const _threadContext = new Map(); // chatId -> { message_thread_id, message_id }
+
+// Expose _originalSendMessage agar broadcast handler dapat mengirim tanpa thread-wrapping
+bot._originalSendMessage = _originalSendMessage;
 
 /**
  * Set thread context dari incoming message
@@ -243,7 +247,7 @@ bot.onText(/\/settings/, async (msg) => {
     session.setState(msg.from.id, STATES.SETTINGS_MENU);
     await bot.sendMessage(msg.chat.id, L(user.lang).settingsTitle, {
       parse_mode: 'Markdown',
-      reply_markup: settingsKeyboard(user.lang),
+      reply_markup: settingsKeyboard(user.lang, broadcastHandler.isAdmin(msg.from.id)),
     });
   } catch (err) {
     log.error('/settings error:', err.message);
@@ -257,6 +261,40 @@ bot.onText(/\/budget/, async (msg) => {
     await budgetHandler.showBudgetMenu(bot, msg.chat.id, msg.from.id);
   } catch (err) {
     log.error('/budget error:', err.message);
+  }
+});
+
+// ========================
+// ADMIN: BROADCAST
+// ========================
+bot.onText(/\/broadcast(?:\s+(.+))?/, async (msg, match) => {
+  log.info(`📨 [${new Date().toLocaleTimeString('id-ID')}] /broadcast dari @${msg.from.username || msg.from.first_name} (${msg.from.id})`);
+  try {
+    // Jika ada teks langsung setelah /broadcast, gunakan sebagai pesan
+    const directText = match && match[1] ? match[1].trim() : null;
+    if (directText) {
+      if (!broadcastHandler.isAdmin(msg.from.id)) {
+        await bot.sendMessage(msg.chat.id, '🚫 *Akses Ditolak*\n\nFitur ini hanya tersedia untuk admin bot.', { parse_mode: 'Markdown' });
+        return;
+      }
+      session.setState(msg.from.id, STATES.ADMIN_BROADCAST_CONFIRM, { broadcastText: directText });
+      const userCount = userStore.getAllUserIds().length;
+      await bot.sendMessage(msg.chat.id,
+        `👁️ *Preview Pesan Broadcast:*\n\n─────────────────────────\n${directText}\n─────────────────────────\n\n👥 Akan dikirim ke *${userCount} pengguna*.\n\nKirim sekarang?`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '✅ Kirim Sekarang', callback_data: 'broadcast:send' }, { text: '❌ Batal', callback_data: 'broadcast:cancel' }],
+            ],
+          },
+        }
+      );
+      return;
+    }
+    await broadcastHandler.showBroadcastMenu(bot, msg);
+  } catch (err) {
+    log.error('/broadcast error:', err.message);
   }
 });
 
@@ -412,6 +450,11 @@ bot.on('message', async (msg) => {
       // --- Budget ---
       case STATES.BUDGET_AMOUNT:
         await budgetHandler.handleBudgetAmount(bot, msg);
+        break;
+
+      // --- Admin Broadcast ---
+      case STATES.ADMIN_BROADCAST_INPUT:
+        await broadcastHandler.handleBroadcastTextInput(bot, msg);
         break;
 
       // --- AI Chat ---
@@ -582,7 +625,7 @@ bot.on('callback_query', async (callbackQuery) => {
       session.setState(userId, STATES.SETTINGS_MENU);
       await bot.sendMessage(chatId, t.settingsTitle, {
         parse_mode: 'Markdown',
-        reply_markup: settingsKeyboard(lang),
+        reply_markup: settingsKeyboard(lang, broadcastHandler.isAdmin(userId)),
       });
       return;
     }
@@ -1000,6 +1043,31 @@ bot.on('callback_query', async (callbackQuery) => {
           }
           break;
         }
+
+        case 'broadcast':
+          // Admin: buka menu broadcast
+          await broadcastHandler.showBroadcastMenu(bot, { from: callbackQuery.from, chat: callbackQuery.message.chat });
+          break;
+
+        case 'admin': {
+          // Admin: tampilkan panel admin
+          const userCount = require('./services/userStore').getAllUserIds().length;
+          const adminText =
+            `👑 *Panel Admin*\n\n` +
+            `👥 Total pengguna: *${userCount} user*\n\n` +
+            `Pilih aksi admin:`;
+          await bot.sendMessage(chatId, adminText, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '📢 Broadcast Pesan', callback_data: 'broadcast:menu' }],
+                [{ text: '📊 Statistik Pengguna', callback_data: 'broadcast:stats' }],
+                [{ text: '◀️ Kembali ke Pengaturan', callback_data: 'menu:settings' }],
+              ],
+            },
+          });
+          break;
+        }
       }
       return;
     }
@@ -1041,6 +1109,47 @@ bot.on('callback_query', async (callbackQuery) => {
     if (data.startsWith('budget:clear:')) {
       const categoryName = data.split(':').slice(2).join(':');
       await budgetHandler.handleBudgetClear(bot, callbackQuery, categoryName);
+      return;
+    }
+
+    // ========================
+    // ADMIN BROADCAST
+    // ========================
+    if (data === 'broadcast:menu') {
+      await bot.answerCallbackQuery(callbackQuery.id);
+      const bcMsg = { from: callbackQuery.from, chat: callbackQuery.message.chat };
+      await broadcastHandler.showBroadcastMenu(bot, bcMsg);
+      return;
+    }
+
+    if (data.startsWith('broadcast:template:')) {
+      const templateKey = data.split(':')[2];
+      await broadcastHandler.handleTemplateSelect(bot, callbackQuery, templateKey);
+      return;
+    }
+
+    if (data === 'broadcast:custom') {
+      await broadcastHandler.handleCustomBroadcast(bot, callbackQuery);
+      return;
+    }
+
+    if (data === 'broadcast:send') {
+      await broadcastHandler.handleSendBroadcast(bot, callbackQuery);
+      return;
+    }
+
+    if (data === 'broadcast:edit') {
+      await broadcastHandler.handleEditBroadcast(bot, callbackQuery);
+      return;
+    }
+
+    if (data === 'broadcast:cancel') {
+      await broadcastHandler.handleCancelBroadcast(bot, callbackQuery);
+      return;
+    }
+
+    if (data === 'broadcast:stats') {
+      await broadcastHandler.handleBroadcastStats(bot, callbackQuery);
       return;
     }
 

@@ -483,6 +483,31 @@ ${txList}
 
 Semangat mengelola keuangan! 💪
 `,
+
+  // ================================
+  // ADMIN BROADCAST
+  // ================================
+  adminOnly: '🚫 *Akses Ditolak*\n\nFitur ini hanya tersedia untuk admin bot.',
+  broadcastMenuTitle: (count) => `📢 *Panel Broadcast Admin*\n\n👥 Total pengguna terdaftar: *${count} user*\n\nPilih jenis pesan yang ingin dikirim:`,
+  broadcastTemplateMaintenance: `🔧 *Bot Maintenance*\n\nHai semua!\n\nBot sedang dalam proses *maintenance* untuk peningkatan performa.\n\n⏳ Diperkirakan selesai dalam beberapa menit.\n\nMohon maaf atas ketidaknyamanannya. 🙏\n\n— Tim MoneyFlowID`,
+  broadcastTemplateUpdate: `🎉 *Update Baru Telah Hadir!*\n\nHai semua!\n\nKami baru saja merilis pembaruan terbaru untuk MoneyFlowID Bot.\n\n✨ *Fitur & Perbaikan Terbaru:*\n• [Isi daftar perubahan di sini]\n\nNikmati pengalaman mencatat keuangan yang lebih baik! 🚀\n\n— Tim MoneyFlowID`,
+  broadcastTemplateWarning: `⚠️ *Pemberitahuan Penting*\n\nHai semua!\n\n[Isi peringatan/informasi penting di sini]\n\nMohon perhatian dan kerjasamanya. 🙏\n\n— Tim MoneyFlowID`,
+  broadcastTemplateAnnouncement: `📣 *Pengumuman*\n\nHai semua!\n\n[Isi pengumuman di sini]\n\nTerima kasih atas perhatiannya! 🙏\n\n— Tim MoneyFlowID`,
+  broadcastCustomPrompt: '✍️ *Broadcast Pesan Kustom*\n\nKetik pesan yang ingin kamu broadcast.\nKamu bisa menggunakan format Markdown:\n• `*teks tebal*`\n• `_teks miring_`\n\nKetik pesanmu sekarang:',
+  broadcastPreview: (text, count) => `👁️ *Preview Pesan Broadcast:*\n\n─────────────────────────\n${text}\n─────────────────────────\n\n👥 Akan dikirim ke *${count} pengguna*.\n\nKirim sekarang?`,
+  broadcastSending: '📤 *Mengirim broadcast...*\n\nMohon tunggu, sedang mengirim ke semua pengguna.',
+  broadcastDone: (total, success, fail) => `✅ *Broadcast Selesai!*\n\n📊 *Hasil Pengiriman:*\n• Total pengguna: *${total}*\n• ✅ Berhasil: *${success}*\n• ❌ Gagal: *${fail}*`,
+  broadcastCancelled: '❌ *Broadcast dibatalkan.*\n\nGunakan /broadcast untuk memulai lagi.',
+  broadcastNoMessage: '⚠️ Tidak ada pesan untuk dikirim.',
+  broadcastStats: (total, setup, notSetup, langId, langEn, time) =>
+    `📊 *Statistik Pengguna Bot*\n\n` +
+    `👥 Total terdaftar: *${total} user*\n` +
+    `✅ Setup lengkap: *${setup} user*\n` +
+    `⏳ Belum setup: *${notSetup} user*\n\n` +
+    `🌐 *Bahasa:*\n` +
+    `• 🇮🇩 Indonesia: *${langId} user*\n` +
+    `• 🇬🇧 English: *${langEn} user*\n\n` +
+    `🕐 Update: ${time}`,
 };
 
 function formatNumber(num) {

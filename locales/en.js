@@ -481,6 +481,31 @@ ${txList}
 
 Keep up the great financial habits! 💪
 `,
+
+  // ================================
+  // ADMIN BROADCAST
+  // ================================
+  adminOnly: '🚫 *Access Denied*\n\nThis feature is only available for the bot admin.',
+  broadcastMenuTitle: (count) => `📢 *Admin Broadcast Panel*\n\n👥 Total registered users: *${count} users*\n\nChoose the type of message to send:`,
+  broadcastTemplateMaintenance: `🔧 *Bot Maintenance*\n\nHello everyone!\n\nThe bot is currently undergoing *maintenance* for performance improvements.\n\n⏳ Estimated completion time: a few minutes.\n\nWe apologize for the inconvenience. 🙏\n\n— MoneyFlowID Team`,
+  broadcastTemplateUpdate: `🎉 *New Update Available!*\n\nHello everyone!\n\nWe've just released the latest update for MoneyFlowID Bot.\n\n✨ *New Features & Fixes:*\n• [Fill in the changes here]\n\nEnjoy a better financial tracking experience! 🚀\n\n— MoneyFlowID Team`,
+  broadcastTemplateWarning: `⚠️ *Important Notice*\n\nHello everyone!\n\n[Fill in the warning/important info here]\n\nThank you for your attention and cooperation. 🙏\n\n— MoneyFlowID Team`,
+  broadcastTemplateAnnouncement: `📣 *Announcement*\n\nHello everyone!\n\n[Fill in the announcement here]\n\nThank you for your attention! 🙏\n\n— MoneyFlowID Team`,
+  broadcastCustomPrompt: '✍️ *Custom Broadcast Message*\n\nType the message you want to broadcast.\nYou can use Markdown formatting:\n• `*bold text*`\n• `_italic text_`\n\nType your message now:',
+  broadcastPreview: (text, count) => `👁️ *Broadcast Message Preview:*\n\n─────────────────────────\n${text}\n─────────────────────────\n\n👥 Will be sent to *${count} users*.\n\nSend now?`,
+  broadcastSending: '📤 *Sending broadcast...*\n\nPlease wait while we send to all users.',
+  broadcastDone: (total, success, fail) => `✅ *Broadcast Complete!*\n\n📊 *Delivery Report:*\n• Total users: *${total}*\n• ✅ Success: *${success}*\n• ❌ Failed: *${fail}*`,
+  broadcastCancelled: '❌ *Broadcast cancelled.*\n\nUse /broadcast to start again.',
+  broadcastNoMessage: '⚠️ No message to send.',
+  broadcastStats: (total, setup, notSetup, langId, langEn, time) =>
+    `📊 *Bot User Statistics*\n\n` +
+    `👥 Total registered: *${total} users*\n` +
+    `✅ Setup complete: *${setup} users*\n` +
+    `⏳ Not setup: *${notSetup} users*\n\n` +
+    `🌐 *Language:*\n` +
+    `• 🇮🇩 Indonesian: *${langId} users*\n` +
+    `• 🇬🇧 English: *${langEn} users*\n\n` +
+    `🕐 Updated: ${time}`,
 };
 
 

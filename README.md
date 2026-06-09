@@ -60,9 +60,14 @@ Bot all-in-one untuk tracking income, expenses, dan memberikan insights keuangan
 - 👥 **Multi-user** — Setiap pengguna punya data, akun, & budget terpisah
 - 🔄 **Flexible Setup** — Customize income sources, spending categories, akun, & bills sesuai kebutuhan
 - 🗑️ **Reset Data** — Reset spreadsheet & data user untuk mulai dari awal
-- 🌐 **Bilingual Support** — Bahasa Indonesia & English, bisa ganti kapan saja
-- 👥 **Multi-user** — Setiap pengguna punya data, akun, & budget terpisah
-- 🔄 **Flexible Setup** — Customize income sources, spending categories, akun, & bills sesuai kebutuhan
+
+### 👑 **Fitur Admin Bot**
+- 📢 **Broadcast Pesan** — Kirim pesan/pengumuman ke seluruh pengguna sekaligus (via menu Pengaturan atau `/broadcast`)
+- 🔧 **Template Broadcast** — Template siap pakai: Maintenance, Update Fitur, Peringatan, Pengumuman
+- ✍️ **Pesan Kustom** — Tulis pesan broadcast bebas dengan format Markdown
+- 👑 **Panel Admin** — Dashboard admin: statistik pengguna, broadcast, info bot
+- 📊 **Statistik Pengguna** — Lihat total user, user aktif, breakdown bahasa
+- 🔒 **Akses Terproteksi** — Menu admin hanya tampil jika `BOT_ADMIN_ID` dikonfigurasi & sesuai
 
 
 
@@ -110,6 +115,18 @@ Tabel lengkap semua transaksi dengan kolom:
 ⚙️  Pengaturan    →  Customize akun, kategori, sumber income, bahasa
 ```
 
+### **Menu Pengaturan Admin (hanya terlihat oleh admin)**
+```
+📢 Broadcast     →  Buka panel broadcast langsung
+👑 Panel Admin   →  Dashboard admin (statistik, broadcast, info)
+```
+
+### **Perintah Admin**
+```
+/broadcast           →  Buka menu broadcast
+/broadcast <pesan>   →  Kirim pesan broadcast langsung (shortcut)
+```
+
 ### **Contoh Penggunaan (AI Chat Feature)**
 User bisa langsung chat transaksi dengan bahasa natural:
 - *"Bayar makan di warteg 15rb dari BCA"* → Bot parse & catat spending
@@ -150,7 +167,8 @@ MoneyFlowIDBot/
 │   ├── start.js             # Onboarding & /start
 │   ├── setup.js             # Flow setup keuangan
 │   ├── transaction.js       # Catat transaksi
-│   └── report.js            # Laporan & AI
+│   ├── report.js            # Laporan & AI
+│   └── broadcast.js         # Admin broadcast & panel admin
 ├── locales/
 │   ├── id.js                # Bahasa Indonesia
 │   ├── en.js                # English
@@ -430,12 +448,18 @@ GROQ_API_KEY=your_groq_api_key_here
 # Google Credentials
 GOOGLE_CREDENTIALS_PATH=./credentials/google-credentials.json
 
+# Admin Bot (opsional — untuk fitur Broadcast & Panel Admin)
+# Cek ID Telegram kamu: chat @userinfobot di Telegram
+BOT_ADMIN_ID=your_telegram_user_id_here
+
 # Timezone (untuk cron jobs)
 TIMEZONE=Asia/Jakarta
 
 # Log Level (debug / info / warn / error)
 LOG_LEVEL=info
 ```
+
+> 💡 **Catatan Admin**: Isi `BOT_ADMIN_ID` dengan Telegram User ID kamu (angka, bukan username). Jika diisi, menu **📢 Broadcast** dan **👑 Panel Admin** akan muncul otomatis di menu Pengaturan bot.
 
 ---
 

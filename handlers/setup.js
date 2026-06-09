@@ -601,10 +601,11 @@ async function completeSetup(bot, chatId, userId, user) {
 
 async function showSettingsMenu(bot, chatId, userId, lang) {
   const { settingsKeyboard } = require('./menu');
+  const { isAdmin } = require('./broadcast');
   const t = L(lang);
   await bot.sendMessage(chatId, t.settingsTitle, {
     parse_mode: 'Markdown',
-    reply_markup: settingsKeyboard(lang),
+    reply_markup: settingsKeyboard(lang, isAdmin(userId)),
   });
 }
 

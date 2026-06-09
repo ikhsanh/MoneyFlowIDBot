@@ -236,21 +236,29 @@ function reportKeyboard(lang = 'id') {
 /**
  * Keyboard pengaturan
  */
-function settingsKeyboard(lang = 'id') {
+function settingsKeyboard(lang = 'id', isAdmin = false) {
   const isId = lang === 'id';
-  return {
-    inline_keyboard: [
-      [{ text: isId ? '🌐 Ubah Bahasa' : '🌐 Change Language', callback_data: 'settings:language' }],
-      [{ text: isId ? '🤖 Pilih AI Service' : '🤖 Choose AI Service', callback_data: 'settings:ai' }],
-      [{ text: isId ? '💼 Kelola Sumber Income' : '💼 Manage Income Sources', callback_data: 'settings:income' }],
-      [{ text: isId ? '💳 Kelola Akun' : '💳 Manage Accounts', callback_data: 'settings:accounts' }],
-      [{ text: isId ? '🛍️ Kelola Kategori' : '🛍️ Manage Categories', callback_data: 'settings:spending' }],
-      [{ text: isId ? '📅 Kelola Tagihan' : '📅 Manage Bills', callback_data: 'settings:bills' }],
-      [{ text: isId ? '📊 Ganti Spreadsheet' : '📊 Change Spreadsheet', callback_data: 'settings:spreadsheet' }],
-      [{ text: isId ? '🗑️ Reset Data Saya' : '🗑️ Reset My Data', callback_data: 'settings:reset' }],
-      [{ text: isId ? '◀️ Kembali' : '◀️ Back', callback_data: 'menu:main' }],
-    ],
-  };
+  const rows = [
+    [{ text: isId ? '🌐 Ubah Bahasa' : '🌐 Change Language', callback_data: 'settings:language' }],
+    [{ text: isId ? '🤖 Pilih AI Service' : '🤖 Choose AI Service', callback_data: 'settings:ai' }],
+    [{ text: isId ? '💼 Kelola Sumber Income' : '💼 Manage Income Sources', callback_data: 'settings:income' }],
+    [{ text: isId ? '💳 Kelola Akun' : '💳 Manage Accounts', callback_data: 'settings:accounts' }],
+    [{ text: isId ? '🛍️ Kelola Kategori' : '🛍️ Manage Categories', callback_data: 'settings:spending' }],
+    [{ text: isId ? '📅 Kelola Tagihan' : '📅 Manage Bills', callback_data: 'settings:bills' }],
+    [{ text: isId ? '📊 Ganti Spreadsheet' : '📊 Change Spreadsheet', callback_data: 'settings:spreadsheet' }],
+    [{ text: isId ? '🗑️ Reset Data Saya' : '🗑️ Reset My Data', callback_data: 'settings:reset' }],
+  ];
+
+  // Tampilkan menu admin hanya untuk admin bot
+  if (isAdmin) {
+    rows.push([
+      { text: '📢 Broadcast', callback_data: 'settings:broadcast' },
+      { text: '👑 Panel Admin', callback_data: 'settings:admin' },
+    ]);
+  }
+
+  rows.push([{ text: isId ? '◀️ Kembali' : '◀️ Back', callback_data: 'menu:main' }]);
+  return { inline_keyboard: rows };
 }
 
 /**
